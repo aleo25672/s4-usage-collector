@@ -55,6 +55,10 @@ npm run extract -- --help
 
 See [abap/README.md](abap/README.md). The `abap/` folder is abapGit-ready (`.prog.abap` + `.prog.xml`, starting folder `/abap/` via `.abapgit.xml`). Pull into package `ZST03N` with abapGit, or paste into `SE38` as `ZST03N_EXTRACT`.
 
+### HTTP / OData (optional)
+
+To expose the same aggregates over HTTPS for the Node app, follow **[abap/HTTP.md](abap/HTTP.md)** (ICF handler `ZCL_ST03N_HTTP_HANDLER` → `/sap/bc/zst03n/workload`). That guide also covers a later SEGW OData path.
+
 ## API
 
 | Endpoint | Description |
