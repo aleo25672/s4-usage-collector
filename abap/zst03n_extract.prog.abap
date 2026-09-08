@@ -12,7 +12,7 @@
 *& Source FM: SWNC_COLLECTOR_GET_AGGREGATES
 *& Alternative frame API: SWNC_GET_AGGREGATES_FRAME (SCSM_NW_WORKLOAD)
 *&
-*& Install: create executable program ZST03N_EXTRACT in SE38 and paste.
+*& Install: abapGit pull from /abap/ (see .abapgit.xml), or SE38 paste.
 *& Tested conceptually against SAP_BASIS 7.5x+; adjust structure field
 *& names if your release differs (SE11 → SWNCAGGTASKTYPE etc.).
 *&---------------------------------------------------------------------*
