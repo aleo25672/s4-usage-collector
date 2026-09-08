@@ -13,8 +13,7 @@
 *& Alternative frame API: SWNC_GET_AGGREGATES_FRAME (SCSM_NW_WORKLOAD)
 *&
 *& Install: abapGit pull from /abap/ (see .abapgit.xml), or SE38 paste.
-*& Tested conceptually against SAP_BASIS 7.5x+; adjust structure field
-*& names if your release differs (SE11 → SWNCAGGTASKTYPE etc.).
+*& Field names match SWNCAGG* / SWNCHITLIST on SAP_BASIS 7.5x+.
 *&---------------------------------------------------------------------*
 REPORT zst03n_extract.
 
@@ -45,7 +44,7 @@ PARAMETERS:
   p_pres  RADIOBUTTON GROUP out DEFAULT 'X', " Presentation server (GUI)
   p_apps  RADIOBUTTON GROUP out,             " Application server
   p_path  TYPE rlgrap-filename
-            DEFAULT 'C:\temp\st03n_extract'. " Base path / filename prefix
+            DEFAULT 'C:\temp\st03n_extract', " Base path / filename prefix
   p_alv   AS CHECKBOX DEFAULT 'X'.           " Also show TASKTYPE ALV
 SELECTION-SCREEN END OF BLOCK b3.
 
@@ -165,18 +164,16 @@ FORM write_lines USING iv_suffix TYPE string
 ENDFORM.
 
 *&---------------------------------------------------------------------*
-*& CSV helpers — keep headers stable for Node.js / BI consumers
-*& Field names follow common SWNCAGG* layouts; verify on your system.
+*& CSV helpers — component names match SE11 SWNCAGG* / SWNCHITLIST
 *&---------------------------------------------------------------------*
 FORM write_csv_tasktype.
   DATA: lt TYPE stringtab,
         lv TYPE string,
         ls TYPE swncaggtasktype.
 
-  APPEND 'TASKTYPE,COUNT,RESPTI,PROCTI,CPUTI,DBTI,WAITTI,ROLLWAITTI,GUITIME' TO lt.
+  APPEND 'TASKTYPE,COUNT,RESPTI,PROCTI,CPUTI,QUEUETI,ROLLWAITTI,GUITIME,DBP_TIME' TO lt.
   LOOP AT gt_tasktype INTO ls.
-    " Adjust component names via SE11 if activation fails on your release
-    lv = |{ ls-tasktype },{ ls-count },{ ls-respti },{ ls-procti },{ ls-cputi },{ ls-dbti },{ ls-waitti },{ ls-rollwaitti },{ ls-guitime }|.
+    lv = |{ ls-tasktype },{ ls-count },{ ls-respti },{ ls-procti },{ ls-cputi },{ ls-queueti },{ ls-rollwaitti },{ ls-guitime },{ ls-dbp_time }|.
     APPEND lv TO lt.
   ENDLOOP.
   PERFORM write_lines USING 'tasktype' lt.
@@ -187,9 +184,9 @@ FORM write_csv_tcdet.
         lv TYPE string,
         ls TYPE swncaggtcdet.
 
-  APPEND 'ENTRY_ID,TCODE,ACCOUNT,COUNT,RESPTI,PROCTI,CPUTI,DBTI' TO lt.
+  APPEND 'ENTRY_ID,FCODE,ACCOUNT,COUNT,RESPTI,PROCTI,CPUTI,QUEUETI,DBP_TIME' TO lt.
   LOOP AT gt_tcdet INTO ls.
-    lv = |{ ls-entry_id },{ ls-tcode },{ ls-account },{ ls-count },{ ls-respti },{ ls-procti },{ ls-cputi },{ ls-dbti }|.
+    lv = |{ ls-entry_id },{ ls-fcode },{ ls-account },{ ls-count },{ ls-respti },{ ls-procti },{ ls-cputi },{ ls-queueti },{ ls-dbp_time }|.
     APPEND lv TO lt.
   ENDLOOP.
   PERFORM write_lines USING 'tcdet' lt.
@@ -200,9 +197,9 @@ FORM write_csv_userworkload.
         lv TYPE string,
         ls TYPE swncagguserworkload.
 
-  APPEND 'ACCOUNT,COUNT,RESPTI,PROCTI,CPUTI,DBTI' TO lt.
+  APPEND 'ACCOUNT,USERNAME,COUNT,RESPTI,PROCTI,CPUTI,QUEUETI,ROLLWAITTI' TO lt.
   LOOP AT gt_userworkload INTO ls.
-    lv = |{ ls-account },{ ls-count },{ ls-respti },{ ls-procti },{ ls-cputi },{ ls-dbti }|.
+    lv = |{ ls-account },{ ls-username },{ ls-count },{ ls-respti },{ ls-procti },{ ls-cputi },{ ls-queueti },{ ls-rollwaitti }|.
     APPEND lv TO lt.
   ENDLOOP.
   PERFORM write_lines USING 'userworkload' lt.
@@ -213,9 +210,9 @@ FORM write_csv_usertcode.
         lv TYPE string,
         ls TYPE swncaggusertcode.
 
-  APPEND 'ACCOUNT,ENTRY_ID,TCODE,COUNT,RESPTI,PROCTI,CPUTI,DBTI' TO lt.
+  APPEND 'ACCOUNT,ENTRY_ID,COUNT,RESPTI,PROCTI,CPUTI,QUEUETI,DBP_TIME' TO lt.
   LOOP AT gt_usertcode INTO ls.
-    lv = |{ ls-account },{ ls-entry_id },{ ls-tcode },{ ls-count },{ ls-respti },{ ls-procti },{ ls-cputi },{ ls-dbti }|.
+    lv = |{ ls-account },{ ls-entry_id },{ ls-count },{ ls-respti },{ ls-procti },{ ls-cputi },{ ls-queueti },{ ls-dbp_time }|.
     APPEND lv TO lt.
   ENDLOOP.
   PERFORM write_lines USING 'usertcode' lt.
@@ -226,9 +223,9 @@ FORM write_csv_times.
         lv TYPE string,
         ls TYPE swncaggtimes.
 
-  APPEND 'TIMESLOT,COUNT,RESPTI,PROCTI,CPUTI,DBTI' TO lt.
+  APPEND 'TIME,ENTRY_ID,COUNT,RESPTI,PROCTI,CPUTI,QUEUETI,DBP_TIME' TO lt.
   LOOP AT gt_times INTO ls.
-    lv = |{ ls-timeslot },{ ls-count },{ ls-respti },{ ls-procti },{ ls-cputi },{ ls-dbti }|.
+    lv = |{ ls-time },{ ls-entry_id },{ ls-count },{ ls-respti },{ ls-procti },{ ls-cputi },{ ls-queueti },{ ls-dbp_time }|.
     APPEND lv TO lt.
   ENDLOOP.
   PERFORM write_lines USING 'times' lt.
@@ -240,13 +237,13 @@ FORM write_csv_rfc.
         ls_c TYPE swncaggrfcclnt,
         ls_s TYPE swncaggrfcsrvr.
 
-  APPEND 'DIRECTION,DESTINATION,FUNCNAME,COUNT,EXETI,CALL_TIME' TO lt.
+  APPEND 'DIRECTION,TARGET,FUNC_NAME,COUNTER,EXE_TIME,CALL_TIME,ENTRY_ID,ACCOUNT' TO lt.
   LOOP AT gt_rfcclnt INTO ls_c.
-    lv = |CLIENT,{ ls_c-destination },{ ls_c-funcname },{ ls_c-count },{ ls_c-exeti },{ ls_c-call_time }|.
+    lv = |CLIENT,{ ls_c-target },{ ls_c-func_name },{ ls_c-counter },{ ls_c-exe_time },{ ls_c-call_time },{ ls_c-entry_id },{ ls_c-account }|.
     APPEND lv TO lt.
   ENDLOOP.
   LOOP AT gt_rfcsrvr INTO ls_s.
-    lv = |SERVER,{ ls_s-destination },{ ls_s-funcname },{ ls_s-count },{ ls_s-exeti },{ ls_s-call_time }|.
+    lv = |SERVER,{ ls_s-target },{ ls_s-func_name },{ ls_s-counter },{ ls_s-exe_time },{ ls_s-call_time },{ ls_s-entry_id },{ ls_s-account }|.
     APPEND lv TO lt.
   ENDLOOP.
   PERFORM write_lines USING 'rfc' lt.
@@ -257,17 +254,17 @@ FORM write_csv_hitlists.
         lv TYPE string,
         ls TYPE swnchitlist.
 
-  APPEND 'KIND,ACCOUNT,TCODE,REPORT,RESPTI,DBTI,CPUTI,ENDTIME' TO lt.
+  APPEND 'KIND,ACCOUNT,TCODE,REPORT,RESPTI,CPUTI,DBP_TIME,ENDDATE,ENDTIME' TO lt.
   LOOP AT gt_hit_resp INTO ls.
-    lv = |RESPTIME,{ ls-account },{ ls-tcode },{ ls-report },{ ls-respti },{ ls-dbti },{ ls-cputi },{ ls-endtime }|.
+    lv = |RESPTIME,{ ls-account },{ ls-tcode },{ ls-report },{ ls-respti },{ ls-cputi },{ ls-dbp_time },{ ls-enddate },{ ls-endtime }|.
     APPEND lv TO lt.
   ENDLOOP.
   PERFORM write_lines USING 'hitlist_resptime' lt.
 
   CLEAR lt.
-  APPEND 'KIND,ACCOUNT,TCODE,REPORT,RESPTI,DBTI,CPUTI,ENDTIME' TO lt.
+  APPEND 'KIND,ACCOUNT,TCODE,REPORT,RESPTI,CPUTI,DBP_TIME,ENDDATE,ENDTIME' TO lt.
   LOOP AT gt_hit_db INTO ls.
-    lv = |DATABASE,{ ls-account },{ ls-tcode },{ ls-report },{ ls-respti },{ ls-dbti },{ ls-cputi },{ ls-endtime }|.
+    lv = |DATABASE,{ ls-account },{ ls-tcode },{ ls-report },{ ls-respti },{ ls-cputi },{ ls-dbp_time },{ ls-enddate },{ ls-endtime }|.
     APPEND lv TO lt.
   ENDLOOP.
   PERFORM write_lines USING 'hitlist_database' lt.
@@ -290,8 +287,3 @@ FORM show_alv_tasktype.
       MESSAGE lx TYPE 'I'.
   ENDTRY.
 ENDFORM.
-
-* Selection texts (maintain in SE38 → Text elements, or use literals above):
-* text-001 = Period / instance
-* text-002 = Aggregates to extract
-* text-003 = Output
