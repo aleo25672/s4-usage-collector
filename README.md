@@ -2,11 +2,23 @@
 
 Pull SAP S/4 usage and workload statistics in the shape of **ST03N** (Workload Monitor), using the same aggregates the ABAP statistics collector exposes.
 
+## Does ST03N already provide download?
+
+**Interactive only.** From ST03N you can export the *currently displayed* ALV (List → Export / spreadsheet). That is fine for ad-hoc analysis, but it is not a scheduled, multi-table bulk extract.
+
+For automation use one of:
+
+| Path | When to use |
+|---|---|
+| **Node.js CLI** (`npm run extract`) | Pipelines, laptops, this dashboard’s mock/RFC provider |
+| **ABAP report** [`abap/zst03n_extract.prog.abap`](abap/zst03n_extract.prog.abap) | On-stack extract, `SM36` jobs, no external RFC SDK |
+| ST03N GUI export | One-off spreadsheet from a single view |
+
+Both extractors call (or mirror) `SWNC_COLLECTOR_GET_AGGREGATES` / `SWNC_GET_AGGREGATES_FRAME` (SAP Note **1053634**).
+
 ## What this covers
 
-ST03N views mapped in this app:
-
-| UI section | ST03N / SWNC aggregate |
+| UI / CSV | ST03N / SWNC aggregate |
 |---|---|
 | Workload overview | `TASKTYPE` |
 | Transaction profile | `TCDET` |
@@ -16,13 +28,7 @@ ST03N views mapped in this app:
 | RFC profile | `RFCCLNT` / `RFCSRVR` |
 | Hitlists | `HITLIST_RESPTIME` / `HITLIST_DATABASE` |
 
-SAP function modules this is designed against (SAP Note **1053634**, function group `SCSM_NW_WORKLOAD`):
-
-- `SWNC_COLLECTOR_GET_AGGREGATES` / `SWNC_GET_AGGREGATES_FRAME`
-- `SWNC_GET_DIRECTORY_FRAME`
-- `SWNC_GET_STATRECS_FRAME` (STAD-level detail; not yet wired)
-
-## Run locally
+## Run the web app
 
 ```bash
 npm install
@@ -31,7 +37,23 @@ npm run dev
 
 Open [http://127.0.0.1:43145](http://127.0.0.1:43145).
 
-By default the app uses a **mock provider** with realistic S/4 transaction mix (VA01, ME21N, FB50, HTTP, background jobs, etc.) so you can explore without an SAP connection.
+Default provider is **mock** (realistic S/4 mix) so you can explore without SAP credentials.
+
+## Node.js extract (CSV)
+
+```bash
+npm run extract -- --periodType D --periodStart 2026-09-08 --out ./output/demo --json
+```
+
+Writes `tasktype.csv`, `tcdet.csv`, `userworkload.csv`, `usertcode.csv`, `times.csv`, `rfc.csv`, hitlists, and `manifest.csv` under the output directory.
+
+```bash
+npm run extract -- --help
+```
+
+## ABAP extract
+
+See [abap/README.md](abap/README.md). Create program `ZST03N_EXTRACT` from `abap/zst03n_extract.prog.abap`, then run online or as a background job to CSV on the presentation or application server.
 
 ## API
 
@@ -39,24 +61,11 @@ By default the app uses a **mock provider** with realistic S/4 transaction mix (
 |---|---|
 | `GET /api/workload/meta` | Connection mode + supported aggregates |
 | `GET /api/workload` | Workload overview (`TASKTYPE` + totals) |
-| `GET /api/workload/bundle` | Full ST03N-shaped bundle |
+| `GET /api/workload/bundle` | Full ST03N-shaped JSON bundle |
 
-Query params (all optional):
+Query params: `systemId`, `instance`, `periodType` (`D`\|`W`\|`M`), `periodStart` (`YYYY-MM-DD`).
 
-- `systemId` — default `S4D` or `SAP_SYSTEM_ID`
-- `instance` — default `TOTAL`
-- `periodType` — `D` \| `W` \| `M`
-- `periodStart` — `YYYY-MM-DD`
-
-Example:
-
-```bash
-curl "http://127.0.0.1:43145/api/workload/bundle?periodType=D&systemId=S4D"
-```
-
-## Connect a live S/4 system
-
-1. Set environment variables:
+## Connect a live S/4 system (Node RFC)
 
 ```bash
 SAP_PROVIDER=rfc
@@ -69,12 +78,10 @@ SAP_SYSTEM_ID=PRD
 SAP_INSTANCE=TOTAL
 ```
 
-2. Install the SAP NetWeaver RFC SDK and [`node-rfc`](https://github.com/SAP/node-rfc).
+Install the SAP NetWeaver RFC SDK and [`node-rfc`](https://github.com/SAP/node-rfc), then implement `invokeAggregates()` in `src/lib/sap/rfc-provider.ts`. Until that is wired, `SAP_PROVIDER=rfc` fails loudly instead of returning empty data.
 
-3. Implement `invokeAggregates()` in `src/lib/sap/rfc-provider.ts` to call `SWNC_COLLECTOR_GET_AGGREGATES` (or `SWNC_GET_AGGREGATES_FRAME`) and map the tables listed above into the domain types in `src/lib/sap/types.ts`.
-
-Until that wiring is done, selecting `SAP_PROVIDER=rfc` returns a clear configuration error instead of silent empty data.
+Prefer the **ABAP report** if you want extracts without exposing RFC to an external host.
 
 ## Stack
 
-Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, Recharts.
+Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, Recharts, plus a `tsx` CLI and an on-stack ABAP report.

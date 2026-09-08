@@ -646,6 +646,21 @@ export function WorkloadDashboard() {
               Collected {new Date(bundle.overview.collectedAt).toLocaleString()}
               {loadedOnce && isPending ? " · refreshing…" : ""}
             </p>
+            <p className="mt-3 max-w-3xl">
+              ST03N GUI export is interactive only (current ALV → spreadsheet).
+              For bulk/scheduled extracts use{" "}
+              <span className="font-mono text-foreground">npm run extract</span>{" "}
+              or ABAP report{" "}
+              <span className="font-mono text-foreground">ZST03N_EXTRACT</span>
+              . Example CSV:{" "}
+              <a
+                className="text-steel underline-offset-2 hover:underline"
+                href={`/api/workload/export?table=tcdet&${queryString(query)}`}
+              >
+                download transaction profile
+              </a>
+              .
+            </p>
           </footer>
         </>
       ) : null}

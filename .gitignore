@@ -20,6 +20,9 @@
 # production
 /build
 
+# ST03N extract output
+/output
+
 # misc
 .DS_Store
 *.pem
