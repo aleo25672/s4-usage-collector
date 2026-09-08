@@ -15,12 +15,33 @@ Traditional on-stack extract of the same ST03N aggregates the Node.js app models
 
 So: use ST03N for interactive analysis; use **this report** or **`npm run extract`** for pipelines.
 
-## Install
+## Files (abapGit layout)
+
+| File | Role |
+|---|---|
+| `zst03n_extract.prog.abap` | Report source |
+| `zst03n_extract.prog.xml` | abapGit metadata (PROGDIR + texts) |
+
+Repo root has `.abapgit.xml` with **starting folder** `/abap/` so the Next.js app can live alongside ABAP in the same git repo.
+
+## Install with abapGit
+
+1. Install [abapGit](https://docs.abapgit.org) in the SAP system (if needed).
+2. Create a local package, e.g. `ZST03N` (`SE80`).
+3. abapGit → **New Online** (GitHub URL) or **New Offline** (zip of this repo).
+4. Link to package `ZST03N`. Confirm starting folder is `/abap/` (from `.abapgit.xml`).
+5. **Pull** → activate `ZST03N_EXTRACT`.
+6. If activation fails on structure components, open `SE11` for `SWNCAGGTASKTYPE`, `SWNCAGGTCDET`, etc., and align field names for your `SAP_BASIS` release.
+
+### Offline zip tip
+
+Zip the whole git repo (or at least `.abapgit.xml` + `abap/`), then import in abapGit offline mode.
+
+## Install without abapGit (SE38)
 
 1. `SE38` → Create program `ZST03N_EXTRACT` (Executable, type 1).
-2. Paste [`zst03n_extract.prog.abap`](./zst03n_extract.prog.abap).
-3. Activate. If activation fails on structure components, open `SE11` for `SWNCAGGTASKTYPE`, `SWNCAGGTCDET`, etc., and align field names (they vary slightly by `SAP_BASIS` release).
-4. Optional: create a variant + `SM36` job for daily/weekly extracts to the app server.
+2. Paste `zst03n_extract.prog.abap`.
+3. Activate.
 
 ## Selection screen
 

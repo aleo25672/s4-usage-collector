@@ -53,7 +53,7 @@ npm run extract -- --help
 
 ## ABAP extract
 
-See [abap/README.md](abap/README.md). Create program `ZST03N_EXTRACT` from `abap/zst03n_extract.prog.abap`, then run online or as a background job to CSV on the presentation or application server.
+See [abap/README.md](abap/README.md). The `abap/` folder is abapGit-ready (`.prog.abap` + `.prog.xml`, starting folder `/abap/` via `.abapgit.xml`). Pull into package `ZST03N` with abapGit, or paste into `SE38` as `ZST03N_EXTRACT`.
 
 ## API
 
