@@ -184,7 +184,9 @@ export function WorkloadDashboard({
                 />
                 {bundle.overview.connection.mode === "mock"
                   ? "Mock provider"
-                  : "RFC provider"}
+                  : bundle.overview.connection.mode === "http"
+                    ? "HTTP · live S/4"
+                    : "RFC provider"}
               </Badge>
             ) : null}
             <Button
@@ -240,7 +242,7 @@ export function WorkloadDashboard({
               className="bg-card/70"
             />
           </label>
-          <div className="flex items-end">
+          <div className="flex items-end gap-2">
             <div className="w-full rounded-md border border-border/80 bg-card/60 px-3 py-2 text-xs text-muted-foreground">
               <div className="font-medium text-foreground">
                 {periodLabel(periodType, periodStart)}
@@ -249,6 +251,14 @@ export function WorkloadDashboard({
                 {systemId} · {instance}
               </div>
             </div>
+            <Button
+              size="sm"
+              className="shrink-0"
+              onClick={refresh}
+              disabled={isPending}
+            >
+              Load
+            </Button>
           </div>
         </div>
       </header>
@@ -259,6 +269,18 @@ export function WorkloadDashboard({
           className="animate-rise rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
         >
           {error}
+        </div>
+      ) : null}
+
+      {bundle && bundle.overview.totals.steps === 0 ? (
+        <div
+          role="status"
+          className="animate-rise rounded-md border border-border/80 bg-card/80 px-4 py-3 text-sm text-muted-foreground"
+        >
+          No aggregate steps for this period. Day rollups are often only
+          available for <span className="font-medium text-foreground">yesterday</span>{" "}
+          (and older) after the ST03N collector runs — try the previous day or
+          confirm data exists in ST03N Workload for the same selection.
         </div>
       ) : null}
 

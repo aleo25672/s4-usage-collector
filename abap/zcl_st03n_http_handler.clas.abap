@@ -41,7 +41,15 @@ CLASS zcl_st03n_http_handler IMPLEMENTATION.
           lt_rfcclnt  TYPE TABLE OF swncaggrfcclnt,
           lt_rfcsrvr  TYPE TABLE OF swncaggrfcsrvr,
           lt_hit_resp TYPE TABLE OF swnchitlist,
-          lt_hit_db   TYPE TABLE OF swnchitlist.
+          lt_hit_db   TYPE TABLE OF swnchitlist,
+          ls_uw       TYPE swncagguserworkload,
+          ls_ut       TYPE swncaggusertcode,
+          ls_tm       TYPE swncaggtimes,
+          ls_rc       TYPE swncaggrfcclnt,
+          ls_rs       TYPE swncaggrfcsrvr,
+          ls_h        TYPE swnchitlist,
+          lv_rows     TYPE i,
+          lv_limit    TYPE i VALUE 200.
 
     lv_method = to_upper( server->request->get_header_field( '~request_method' ) ).
     IF lv_method <> 'GET'.
@@ -132,17 +140,142 @@ CLASS zcl_st03n_http_handler IMPLEMENTATION.
 
     lv_json = lv_json && '],"transactions":['.
     lv_first = abap_true.
+    lv_rows = 0.
     LOOP AT lt_tcdet INTO ls_tc.
+      IF lv_rows >= lv_limit. EXIT. ENDIF.
       IF lv_first = abap_false.
         lv_json = lv_json && ','.
       ENDIF.
       lv_first = abap_false.
+      lv_rows = lv_rows + 1.
       lv_piece =
         |\{"entryId":"{ escape_json( ls_tc-entry_id ) }",| &&
         |"fcode":"{ escape_json( ls_tc-fcode ) }",| &&
         |"account":"{ escape_json( ls_tc-account ) }",| &&
         |"steps":{ ls_tc-count },"totalResponseTimeMs":{ ls_tc-respti },| &&
-        |"dbTimeMs":{ ls_tc-dbp_time }\}|.
+        |"cpuTimeMs":{ ls_tc-cputi },"dbTimeMs":{ ls_tc-dbp_time }\}|.
+      lv_json = lv_json && lv_piece.
+    ENDLOOP.
+
+    lv_json = lv_json && '],"users":['.
+    lv_first = abap_true.
+    lv_rows = 0.
+    LOOP AT lt_users INTO ls_uw.
+      IF lv_rows >= lv_limit. EXIT. ENDIF.
+      IF lv_first = abap_false.
+        lv_json = lv_json && ','.
+      ENDIF.
+      lv_first = abap_false.
+      lv_rows = lv_rows + 1.
+      lv_piece =
+        |\{"user":"{ escape_json( ls_uw-account ) }",| &&
+        |"steps":{ ls_uw-count },"totalResponseTimeMs":{ ls_uw-respti },| &&
+        |"cpuTimeMs":{ ls_uw-cputi }\}|.
+      lv_json = lv_json && lv_piece.
+    ENDLOOP.
+
+    lv_json = lv_json && '],"userTransactions":['.
+    lv_first = abap_true.
+    lv_rows = 0.
+    LOOP AT lt_usertc INTO ls_ut.
+      IF lv_rows >= lv_limit. EXIT. ENDIF.
+      IF lv_first = abap_false.
+        lv_json = lv_json && ','.
+      ENDIF.
+      lv_first = abap_false.
+      lv_rows = lv_rows + 1.
+      lv_piece =
+        |\{"user":"{ escape_json( ls_ut-account ) }",| &&
+        |"entryId":"{ escape_json( ls_ut-entry_id ) }",| &&
+        |"tcode":"{ escape_json( ls_ut-entry_id ) }",| &&
+        |"steps":{ ls_ut-count },"totalResponseTimeMs":{ ls_ut-respti }\}|.
+      lv_json = lv_json && lv_piece.
+    ENDLOOP.
+
+    lv_json = lv_json && '],"timeProfile":['.
+    lv_first = abap_true.
+    lv_rows = 0.
+    LOOP AT lt_times INTO ls_tm.
+      IF lv_rows >= lv_limit. EXIT. ENDIF.
+      IF lv_first = abap_false.
+        lv_json = lv_json && ','.
+      ENDIF.
+      lv_first = abap_false.
+      lv_rows = lv_rows + 1.
+      lv_piece =
+        |\{"slot":"{ escape_json( ls_tm-time ) }",| &&
+        |"steps":{ ls_tm-count },"totalResponseTimeMs":{ ls_tm-respti },| &&
+        |"dbTimeMs":{ ls_tm-dbp_time }\}|.
+      lv_json = lv_json && lv_piece.
+    ENDLOOP.
+
+    lv_json = lv_json && '],"rfc":['.
+    lv_first = abap_true.
+    lv_rows = 0.
+    LOOP AT lt_rfcclnt INTO ls_rc.
+      IF lv_rows >= lv_limit. EXIT. ENDIF.
+      IF lv_first = abap_false.
+        lv_json = lv_json && ','.
+      ENDIF.
+      lv_first = abap_false.
+      lv_rows = lv_rows + 1.
+      lv_piece =
+        |\{"direction":"CLIENT","target":"{ escape_json( ls_rc-target ) }",| &&
+        |"functionModule":"{ escape_json( ls_rc-func_name ) }",| &&
+        |"calls":{ ls_rc-counter },"exeTimeMs":{ ls_rc-exe_time },| &&
+        |"callTimeMs":{ ls_rc-call_time }\}|.
+      lv_json = lv_json && lv_piece.
+    ENDLOOP.
+    LOOP AT lt_rfcsrvr INTO ls_rs.
+      IF lv_rows >= lv_limit. EXIT. ENDIF.
+      IF lv_first = abap_false.
+        lv_json = lv_json && ','.
+      ENDIF.
+      lv_first = abap_false.
+      lv_rows = lv_rows + 1.
+      lv_piece =
+        |\{"direction":"SERVER","target":"{ escape_json( ls_rs-target ) }",| &&
+        |"functionModule":"{ escape_json( ls_rs-func_name ) }",| &&
+        |"calls":{ ls_rs-counter },"exeTimeMs":{ ls_rs-exe_time },| &&
+        |"callTimeMs":{ ls_rs-call_time }\}|.
+      lv_json = lv_json && lv_piece.
+    ENDLOOP.
+
+    lv_json = lv_json && '],"hitlistResponse":['.
+    lv_first = abap_true.
+    lv_rows = 0.
+    LOOP AT lt_hit_resp INTO ls_h.
+      IF lv_rows >= 100. EXIT. ENDIF.
+      IF lv_first = abap_false.
+        lv_json = lv_json && ','.
+      ENDIF.
+      lv_first = abap_false.
+      lv_rows = lv_rows + 1.
+      lv_piece =
+        |\{"user":"{ escape_json( ls_h-account ) }",| &&
+        |"tcode":"{ escape_json( ls_h-tcode ) }",| &&
+        |"report":"{ escape_json( ls_h-report ) }",| &&
+        |"responseTimeMs":{ ls_h-respti },"dbTimeMs":{ ls_h-dbp_time },| &&
+        |"cpuTimeMs":{ ls_h-cputi }\}|.
+      lv_json = lv_json && lv_piece.
+    ENDLOOP.
+
+    lv_json = lv_json && '],"hitlistDatabase":['.
+    lv_first = abap_true.
+    lv_rows = 0.
+    LOOP AT lt_hit_db INTO ls_h.
+      IF lv_rows >= 100. EXIT. ENDIF.
+      IF lv_first = abap_false.
+        lv_json = lv_json && ','.
+      ENDIF.
+      lv_first = abap_false.
+      lv_rows = lv_rows + 1.
+      lv_piece =
+        |\{"user":"{ escape_json( ls_h-account ) }",| &&
+        |"tcode":"{ escape_json( ls_h-tcode ) }",| &&
+        |"report":"{ escape_json( ls_h-report ) }",| &&
+        |"responseTimeMs":{ ls_h-respti },"dbTimeMs":{ ls_h-dbp_time },| &&
+        |"cpuTimeMs":{ ls_h-cputi }\}|.
       lv_json = lv_json && lv_piece.
     ENDLOOP.
 

@@ -69,7 +69,31 @@ To expose the same aggregates over HTTPS for the Node app, follow **[abap/HTTP.m
 
 Query params: `systemId`, `instance`, `periodType` (`D`\|`W`\|`M`), `periodStart` (`YYYY-MM-DD`).
 
-## Connect a live S/4 system (Node RFC)
+## Connect a live S/4 system
+
+### HTTP (recommended — uses your SICF service)
+
+1. Copy `.env.example` → `.env.local`
+2. Set:
+
+```bash
+SAP_PROVIDER=http
+SAP_HTTP_BASE_URL=http://10.0.0.189:50000/sap/bc/zst03n/workload
+SAP_CLIENT=100
+SAP_SYSTEM_ID=S4H
+SAP_INSTANCE=TOTAL
+SAP_USER=...
+SAP_PASSWD=...
+```
+
+3. Restart `npm run dev`
+4. In the UI pick **period start = yesterday** (day aggregates for “today” are often empty), System `S4H`, Instance `TOTAL`, click **Load**
+
+The Next.js API calls your ABAP handler; the dashboard maps the JSON into the same charts/tables as mock mode.
+
+Re-activate the enriched `ZCL_ST03N_HTTP_HANDLER` from git so users / USERTCODE / RFC / hitlists are included in the JSON (not only `meta` counts).
+
+### RFC (optional)
 
 ```bash
 SAP_PROVIDER=rfc
@@ -84,7 +108,7 @@ SAP_INSTANCE=TOTAL
 
 Install the SAP NetWeaver RFC SDK and [`node-rfc`](https://github.com/SAP/node-rfc), then implement `invokeAggregates()` in `src/lib/sap/rfc-provider.ts`. Until that is wired, `SAP_PROVIDER=rfc` fails loudly instead of returning empty data.
 
-Prefer the **ABAP report** if you want extracts without exposing RFC to an external host.
+Prefer the **ABAP report** or **HTTP ICF** path if you want extracts without exposing RFC to an external host.
 
 ## Stack
 

@@ -33,7 +33,7 @@ export interface WorkloadQuery {
 }
 
 export interface ConnectionInfo {
-  mode: "mock" | "rfc";
+  mode: "mock" | "rfc" | "http";
   systemId: string;
   instance: string;
   host?: string;
