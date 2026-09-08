@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   Clock3,
@@ -23,13 +23,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -96,34 +89,55 @@ export function WorkloadDashboard() {
   const [instance, setInstance] = useState("TOTAL");
   const [bundle, setBundle] = useState<WorkloadBundle | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(true);
   const [loadedOnce, setLoadedOnce] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const query: WorkloadQuery = useMemo(
     () => ({ systemId, instance, periodType, periodStart }),
     [systemId, instance, periodType, periodStart],
   );
 
-  const load = useCallback(() => {
-    startTransition(async () => {
-      setError(null);
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function run() {
       try {
-        const res = await fetch(`/api/workload/bundle?${queryString(query)}`);
+        const res = await fetch(
+          `/api/workload/bundle?${queryString(query)}`,
+          { signal: controller.signal },
+        );
         const json = await res.json();
+        if (controller.signal.aborted) return;
         if (!res.ok) {
           throw new Error(json.error ?? "Failed to load workload data");
         }
         setBundle(json as WorkloadBundle);
         setLoadedOnce(true);
+        setError(null);
       } catch (e) {
+        if (
+          controller.signal.aborted ||
+          (e instanceof DOMException && e.name === "AbortError")
+        ) {
+          return;
+        }
         setError(e instanceof Error ? e.message : "Failed to load");
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsPending(false);
+        }
       }
-    });
-  }, [query]);
+    }
 
-  useEffect(() => {
-    load();
-  }, [load]);
+    void run();
+    return () => controller.abort();
+  }, [query, reloadKey]);
+
+  function refresh() {
+    setIsPending(true);
+    setReloadKey((k) => k + 1);
+  }
 
   const maxTaskSteps = bundle
     ? Math.max(...bundle.overview.taskTypes.map((t) => t.steps), 1)
@@ -163,7 +177,7 @@ export function WorkloadDashboard() {
             <Button
               variant="outline"
               size="sm"
-              onClick={load}
+              onClick={refresh}
               disabled={isPending}
               className="gap-2"
             >
@@ -194,19 +208,15 @@ export function WorkloadDashboard() {
           </label>
           <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
             Period type
-            <Select
+            <select
               value={periodType}
-              onValueChange={(v) => setPeriodType(v as PeriodType)}
+              onChange={(e) => setPeriodType(e.target.value as PeriodType)}
+              className="h-8 w-full rounded-lg border border-input bg-card/70 px-2.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             >
-              <SelectTrigger className="w-full bg-card/70">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="D">Day (D)</SelectItem>
-                <SelectItem value="W">Week (W)</SelectItem>
-                <SelectItem value="M">Month (M)</SelectItem>
-              </SelectContent>
-            </Select>
+              <option value="D">Day (D)</option>
+              <option value="W">Week (W)</option>
+              <option value="M">Month (M)</option>
+            </select>
           </label>
           <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
             Period start
