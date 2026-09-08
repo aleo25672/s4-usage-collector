@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   Clock3,
@@ -49,10 +49,6 @@ function queryString(q: WorkloadQuery): string {
   return p.toString();
 }
 
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function Metric({
   label,
   value,
@@ -82,16 +78,27 @@ function Metric({
   );
 }
 
-export function WorkloadDashboard() {
-  const [periodType, setPeriodType] = useState<PeriodType>("D");
-  const [periodStart, setPeriodStart] = useState(todayIso);
-  const [systemId, setSystemId] = useState("S4D");
-  const [instance, setInstance] = useState("TOTAL");
-  const [bundle, setBundle] = useState<WorkloadBundle | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, setIsPending] = useState(true);
-  const [loadedOnce, setLoadedOnce] = useState(false);
+export function WorkloadDashboard({
+  initialQuery,
+  initialBundle,
+  initialError,
+}: {
+  initialQuery: WorkloadQuery;
+  initialBundle: WorkloadBundle | null;
+  initialError: string | null;
+}) {
+  const [periodType, setPeriodType] = useState<PeriodType>(
+    initialQuery.periodType,
+  );
+  const [periodStart, setPeriodStart] = useState(initialQuery.periodStart);
+  const [systemId, setSystemId] = useState(initialQuery.systemId);
+  const [instance, setInstance] = useState(initialQuery.instance);
+  const [bundle, setBundle] = useState<WorkloadBundle | null>(initialBundle);
+  const [error, setError] = useState<string | null>(initialError);
+  const [isPending, setIsPending] = useState(false);
+  const [loadedOnce, setLoadedOnce] = useState(Boolean(initialBundle));
   const [reloadKey, setReloadKey] = useState(0);
+  const skipFirstFetch = useRef(Boolean(initialBundle));
 
   const query: WorkloadQuery = useMemo(
     () => ({ systemId, instance, periodType, periodStart }),
@@ -99,6 +106,11 @@ export function WorkloadDashboard() {
   );
 
   useEffect(() => {
+    if (skipFirstFetch.current) {
+      skipFirstFetch.current = false;
+      return;
+    }
+
     const controller = new AbortController();
 
     async function run() {
@@ -136,6 +148,7 @@ export function WorkloadDashboard() {
 
   function refresh() {
     setIsPending(true);
+    skipFirstFetch.current = false;
     setReloadKey((k) => k + 1);
   }
 
