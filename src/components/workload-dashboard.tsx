@@ -5,6 +5,7 @@ import {
   Activity,
   Clock3,
   Database,
+  Download,
   Radio,
   RefreshCw,
   Server,
@@ -21,8 +22,9 @@ import {
   YAxis,
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "cn";
 import {
   Table,
   TableBody,
@@ -139,6 +141,23 @@ export function WorkloadDashboard({
   const maxTaskSteps = bundle
     ? Math.max(...bundle.overview.taskTypes.map((t) => t.steps), 1)
     : 1;
+
+  const exportTables = [
+    { id: "all", label: "All CSVs (ZIP)" },
+    { id: "tasktype", label: "Task types" },
+    { id: "tcdet", label: "Transactions" },
+    { id: "userworkload", label: "Users" },
+    { id: "usertcode", label: "User × transaction" },
+    { id: "times", label: "Time profile" },
+    { id: "rfc", label: "RFC" },
+    { id: "hitlist_resptime", label: "Hitlist · response" },
+    { id: "hitlist_database", label: "Hitlist · database" },
+    { id: "manifest", label: "Manifest" },
+  ] as const;
+
+  function exportHref(table: string): string {
+    return `/api/workload/export?table=${table}&${queryString(draftQuery)}`;
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
@@ -668,31 +687,48 @@ export function WorkloadDashboard({
             </TabsContent>
           </Tabs>
 
-          <footer className="animate-rise border-t border-border/70 pt-6 text-xs leading-relaxed text-muted-foreground">
+          <footer className="animate-rise space-y-4 border-t border-border/70 pt-6 text-xs leading-relaxed text-muted-foreground">
+            <section aria-label="CSV export" className="space-y-3">
+              <div className="flex items-center gap-2 text-sm text-ink">
+                <Download className="size-4 text-steel" />
+                <h2 className="font-heading text-xl">Save as CSV</h2>
+              </div>
+              <p>
+                Same aggregate files as the ABAP extract /{" "}
+                <span className="font-mono text-foreground">npm run extract</span>
+                . Uses the period filters above (load data first for live SAP).
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {exportTables.map((t) => (
+                  <a
+                    key={t.id}
+                    href={exportHref(t.id)}
+                    className={cn(
+                      buttonVariants({
+                        variant: t.id === "all" ? "default" : "outline",
+                        size: "sm",
+                      }),
+                    )}
+                  >
+                    {t.label}
+                  </a>
+                ))}
+              </div>
+            </section>
             <p>
               Data source:{" "}
               <span className="font-medium text-foreground">
                 {bundle.overview.connection.description}
               </span>
             </p>
-            <p className="mt-1 font-mono">
+            <p className="font-mono">
               Collected {formatDateTime(bundle.overview.collectedAt)}
               {loadedOnce && isPending ? " · refreshing…" : ""}
             </p>
-            <p className="mt-3 max-w-3xl">
-              ST03N GUI export is interactive only (current ALV → spreadsheet).
-              For bulk/scheduled extracts use{" "}
-              <span className="font-mono text-foreground">npm run extract</span>{" "}
-              or ABAP report{" "}
-              <span className="font-mono text-foreground">ZST03N_EXTRACT</span>
-              . Example CSV:{" "}
-              <a
-                className="text-steel underline-offset-2 hover:underline"
-                href={`/api/workload/export?table=tcdet&${queryString(draftQuery)}`}
-              >
-                download transaction profile
-              </a>
-              .
+            <p className="max-w-3xl">
+              ST03N GUI export is interactive only. For scheduled on-stack
+              extracts use ABAP report{" "}
+              <span className="font-mono text-foreground">ZST03N_EXTRACT</span>.
             </p>
           </footer>
         </>

@@ -1,150 +1,47 @@
 import { NextResponse } from "next/server";
+import JSZip from "jszip";
+import { buildCsvFiles, toCsv, type CsvTableId } from "@/cli/csv";
 import { getSapProvider, queryFromSearchParams } from "@/lib/sap";
-import { toCsv } from "@/cli/csv";
+
+export const dynamic = "force-dynamic";
 
 /**
- * Download a single ST03N aggregate as CSV.
+ * Download ST03N aggregates as CSV (same files as ABAP extract / CLI).
+ *
  * GET /api/workload/export?table=tasktype&periodType=D&...
+ * GET /api/workload/export?table=all&...  → ZIP of all CSVs
  */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const table = (searchParams.get("table") ?? "tasktype").toLowerCase();
+    const table = (searchParams.get("table") ?? "all").toLowerCase();
     const query = queryFromSearchParams(searchParams);
     const bundle = await getSapProvider().getBundle(query);
+    const files = buildCsvFiles(bundle);
 
-    const map: Record<
-      string,
-      { headers: string[]; rows: Array<Record<string, unknown>>; filename: string }
-    > = {
-      tasktype: {
-        filename: "tasktype.csv",
-        headers: [
-          "taskType",
-          "steps",
-          "avgResponseTimeMs",
-          "avgCpuTimeMs",
-          "avgDbTimeMs",
-          "avgWaitTimeMs",
-          "avgGuiTimeMs",
-          "avgRollWaitMs",
-          "totalResponseTimeMs",
-        ],
-        rows: bundle.overview.taskTypes as unknown as Array<
-          Record<string, unknown>
-        >,
-      },
-      tcdet: {
-        filename: "tcdet.csv",
-        headers: [
-          "tcode",
-          "report",
-          "taskType",
-          "steps",
-          "avgResponseTimeMs",
-          "avgCpuTimeMs",
-          "avgDbTimeMs",
-          "totalResponseTimeMs",
-          "dbReads",
-          "dbChanges",
-        ],
-        rows: bundle.transactions as unknown as Array<Record<string, unknown>>,
-      },
-      userworkload: {
-        filename: "userworkload.csv",
-        headers: [
-          "user",
-          "accountType",
-          "steps",
-          "avgResponseTimeMs",
-          "avgCpuTimeMs",
-          "avgDbTimeMs",
-          "totalResponseTimeMs",
-          "distinctTransactions",
-        ],
-        rows: bundle.users as unknown as Array<Record<string, unknown>>,
-      },
-      usertcode: {
-        filename: "usertcode.csv",
-        headers: [
-          "user",
-          "tcode",
-          "steps",
-          "avgResponseTimeMs",
-          "totalResponseTimeMs",
-        ],
-        rows: bundle.userTransactions as unknown as Array<
-          Record<string, unknown>
-        >,
-      },
-      times: {
-        filename: "times.csv",
-        headers: [
-          "slot",
-          "hour",
-          "steps",
-          "dialogSteps",
-          "backgroundSteps",
-          "avgResponseTimeMs",
-          "avgDbTimeMs",
-        ],
-        rows: bundle.timeProfile as unknown as Array<Record<string, unknown>>,
-      },
-      rfc: {
-        filename: "rfc.csv",
-        headers: [
-          "direction",
-          "destination",
-          "functionModule",
-          "calls",
-          "avgExecutionTimeMs",
-          "avgRemoteTimeMs",
-          "errors",
-        ],
-        rows: bundle.rfc as unknown as Array<Record<string, unknown>>,
-      },
-      hitlist_resptime: {
-        filename: "hitlist_resptime.csv",
-        headers: [
-          "kind",
-          "user",
-          "tcode",
-          "report",
-          "responseTimeMs",
-          "dbTimeMs",
-          "cpuTimeMs",
-          "timestamp",
-          "instance",
-        ],
-        rows: bundle.hitlistResponse as unknown as Array<
-          Record<string, unknown>
-        >,
-      },
-      hitlist_database: {
-        filename: "hitlist_database.csv",
-        headers: [
-          "kind",
-          "user",
-          "tcode",
-          "report",
-          "responseTimeMs",
-          "dbTimeMs",
-          "cpuTimeMs",
-          "timestamp",
-          "instance",
-        ],
-        rows: bundle.hitlistDatabase as unknown as Array<
-          Record<string, unknown>
-        >,
-      },
-    };
+    if (table === "all") {
+      const zip = new JSZip();
+      for (const spec of files) {
+        zip.file(spec.filename, toCsv(spec.headers, spec.rows));
+      }
+      const stamp = query.periodStart.replace(/-/g, "");
+      const filename = `st03n_${query.systemId}_${query.periodType}_${stamp}.zip`;
+      const buffer = await zip.generateAsync({ type: "uint8array" });
+      return new NextResponse(Buffer.from(buffer), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/zip",
+          "Content-Disposition": `attachment; filename="${filename}"`,
+        },
+      });
+    }
 
-    const selected = map[table];
+    const selected = files.find((f) => f.id === (table as CsvTableId));
     if (!selected) {
       return NextResponse.json(
         {
           error: `Unknown table '${table}'`,
-          tables: Object.keys(map),
+          tables: ["all", ...files.map((f) => f.id)],
         },
         { status: 400 },
       );

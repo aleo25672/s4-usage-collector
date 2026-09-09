@@ -1,22 +1,19 @@
 # ST03 Lens
 
-Pull SAP S/4 usage and workload statistics in the shape of **ST03N** (Workload Monitor), using the same aggregates the ABAP statistics collector exposes.
+Pull SAP S/4 **ST03N**-style usage and workload statistics (SWNC aggregates) via:
 
-## Does ST03N already provide download?
-
-**Interactive only.** From ST03N you can export the *currently displayed* ALV (List → Export / spreadsheet). That is fine for ad-hoc analysis, but it is not a scheduled, multi-table bulk extract.
-
-For automation use one of:
-
-| Path | When to use |
+| Path | What it is |
 |---|---|
-| **Node.js CLI** (`npm run extract`) | Pipelines, laptops, this dashboard’s mock/RFC provider |
-| **ABAP report** [`abap/zst03n_extract.prog.abap`](abap/zst03n_extract.prog.abap) | On-stack extract, `SM36` jobs, no external RFC SDK |
-| ST03N GUI export | One-off spreadsheet from a single view |
+| **Node.js web app** | Dashboard + CSV/ZIP download from the browser |
+| **Node.js CLI** | `npm run extract` → CSV files (pipelines / scripts) |
+| **ABAP report** `ZST03N_EXTRACT` | On-stack CSV extract (SE38 / SM36 jobs) |
+| **ABAP HTTP** `ZCL_ST03N_HTTP_HANDLER` | SICF JSON service the web app calls live |
 
-Both extractors call (or mirror) `SWNC_COLLECTOR_GET_AGGREGATES` / `SWNC_GET_AGGREGATES_FRAME` (SAP Note **1053634**).
+Both extractors call (or mirror) `SWNC_COLLECTOR_GET_AGGREGATES` (SAP Note **1053634**). ST03N GUI export is interactive only (one ALV at a time) — use this repo for bulk / scheduled / API access.
 
-## What this covers
+---
+
+## What you get
 
 | UI / CSV | ST03N / SWNC aggregate |
 |---|---|
@@ -28,53 +25,117 @@ Both extractors call (or mirror) `SWNC_COLLECTOR_GET_AGGREGATES` / `SWNC_GET_AGG
 | RFC profile | `RFCCLNT` / `RFCSRVR` |
 | Hitlists | `HITLIST_RESPTIME` / `HITLIST_DATABASE` |
 
-## Run the web app
+---
+
+## Quick start (demo, no SAP)
 
 ```bash
+git clone <your-repo-url> s4-usage-collector
+cd s4-usage-collector
 npm install
 npm run dev
 ```
 
-Open [http://127.0.0.1:43145](http://127.0.0.1:43145).
+Open [http://127.0.0.1:43145](http://127.0.0.1:43145). Default provider is **mock** — explore charts without SAP credentials.
 
-Default provider is **mock** (realistic S/4 mix) so you can explore without SAP credentials.
+At the bottom of the dashboard, **Save as CSV** downloads the same files as the ABAP tool (single CSV or **All CSVs (ZIP)**).
 
-## Node.js extract (CSV)
+---
+
+## End-to-end: live S/4 + web app
+
+Do these in order.
+
+### A. Get the code
+
+1. Clone this repository (GitHub or your Origin remote).
+2. Keep the whole tree — abapGit needs `.abapgit.xml` + `abap/`.
 
 ```bash
-npm run extract -- --periodType D --periodStart 2026-09-08 --out ./output/demo --json
+git clone <your-repo-url> s4-usage-collector
+cd s4-usage-collector
 ```
 
-Writes `tasktype.csv`, `tcdet.csv`, `userworkload.csv`, `usertcode.csv`, `times.csv`, `rfc.csv`, hitlists, and `manifest.csv` under the output directory.
+### B. Install ABAP objects (abapGit)
+
+Repo layout: starting folder `/abap/` (see `.abapgit.xml`).
+
+| Object | File | Role |
+|---|---|---|
+| Report `ZST03N_EXTRACT` | `abap/zst03n_extract.prog.abap` | CSV extract on S/4 |
+| Class `ZCL_ST03N_HTTP_HANDLER` | `abap/zcl_st03n_http_handler.clas.abap` | JSON over HTTP (SICF) |
+
+**Steps**
+
+1. Install [abapGit](https://docs.abapgit.org) on the SAP system if needed.
+2. `SE80` → create package **`ZST03N`** (or reuse an existing Z-package). Assign a transport if not `$TMP`.
+3. abapGit → **New Online** (repo URL) or **New Offline** (zip of this repo).
+4. Link to package `ZST03N`. Confirm starting folder **`/abap/`**.
+5. **Pull** → activate:
+   - `ZST03N_EXTRACT`
+   - `ZCL_ST03N_HTTP_HANDLER`
+6. If activation fails on structure fields (`FCODE`, `QUEUETI`, `DBP_TIME`, RFC `TARGET` / `FUNC_NAME`, …), open `SE11` for `SWNCAGGTASKTYPE`, `SWNCAGGTCDET`, etc., and align names to your `SAP_BASIS` release (same DDIC as ST03N).
+
+**Without abapGit:** paste report source in `SE38` as `ZST03N_EXTRACT`; create class `ZCL_ST03N_HTTP_HANDLER` in `SE24` with interface `IF_HTTP_EXTENSION` and paste the class source. Details: [abap/README.md](abap/README.md).
+
+**Authorizations (SAP)**
+
+- Create/activate Z-objects in package `ZST03N`
+- Read workload stats (roles that can run **ST03N**; often `S_TOOLS_EX` / Basis admin)
+- Maintain **SICF** (next section)
+- Technical user for HTTP: least privilege, read-only workload
+
+### C. Create and activate the HTTP service (SICF)
+
+Full walkthrough: [abap/HTTP.md](abap/HTTP.md). Summary:
+
+1. Transaction **`SICF`** → Execute (F8).
+2. Path: `default_host` → `sap` → `bc`.
+3. Right-click `bc` → **New Sub-Element** → name **`zst03n`**.
+4. Under `zst03n`, create child **`workload`**.
+5. Open `workload` → **Handler List** → handler **`ZCL_ST03N_HTTP_HANDLER`** (order 1).
+6. **Logon Data**: Basic / Alternative Logon (or your standard for internal tools).
+7. **Save** → right-click **`workload`** → **Activate Service**.  
+   Also activate parent **`zst03n`** if it is inactive.
+
+Final path:
+
+```text
+/sap/bc/zst03n/workload
+```
+
+**Host / port (SMICM)**
+
+- Transaction **`SMICM`** → **Goto → Services** — note HTTP vs HTTPS ports.
+- Many S/4 demo systems use **HTTP** on port **50000** (`http://…:50000/…`), not HTTPS. Use the protocol that matches the service.
+
+**Browser smoke test**
+
+```text
+http://<s4-host>:<port>/sap/bc/zst03n/workload?sap-client=100&periodType=D&periodStart=20260907&instance=TOTAL
+```
+
+Expect JSON with `query`, `taskTypes`, `transactions`, users, etc.  
+Use **yesterday’s** date for day aggregates — “today” is often empty until the collector has run.
+
+| Param | Example | Meaning |
+|---|---|---|
+| `periodType` | `D` / `W` / `M` | Day / week / month |
+| `periodStart` | `20260907` or `2026-09-07` | Period start |
+| `systemId` | `S4H` | Defaults to `SY-SYSID` |
+| `instance` | `TOTAL` or e.g. `vhcals4hci_S4H_00` | ST03N instance |
+
+### D. Run the Node.js web app against SAP
+
+**Requirements:** Node.js **20+** (LTS recommended).
 
 ```bash
-npm run extract -- --help
+cd s4-usage-collector
+npm install
+cp .env.example .env.local
 ```
 
-## ABAP extract
-
-See [abap/README.md](abap/README.md). The `abap/` folder is abapGit-ready (`.prog.abap` + `.prog.xml`, starting folder `/abap/` via `.abapgit.xml`). Pull into package `ZST03N` with abapGit, or paste into `SE38` as `ZST03N_EXTRACT`.
-
-### HTTP / OData (optional)
-
-To expose the same aggregates over HTTPS for the Node app, follow **[abap/HTTP.md](abap/HTTP.md)** (ICF handler `ZCL_ST03N_HTTP_HANDLER` → `/sap/bc/zst03n/workload`). That guide also covers a later SEGW OData path.
-
-## API
-
-| Endpoint | Description |
-|---|---|
-| `GET /api/workload/meta` | Connection mode + supported aggregates |
-| `GET /api/workload` | Workload overview (`TASKTYPE` + totals) |
-| `GET /api/workload/bundle` | Full ST03N-shaped JSON bundle |
-
-Query params: `systemId`, `instance`, `periodType` (`D`\|`W`\|`M`), `periodStart` (`YYYY-MM-DD`).
-
-## Connect a live S/4 system
-
-### HTTP (recommended — uses your SICF service)
-
-1. Copy `.env.example` → `.env.local`
-2. Set:
+Edit **`.env.local`** (uncomment and set real values):
 
 ```bash
 SAP_PROVIDER=http
@@ -82,34 +143,117 @@ SAP_HTTP_BASE_URL=http://10.0.0.189:50000/sap/bc/zst03n/workload
 SAP_CLIENT=100
 SAP_SYSTEM_ID=S4H
 SAP_INSTANCE=TOTAL
-SAP_USER=...
-SAP_PASSWD=...
+SAP_USER=YOUR_USER
+SAP_PASSWD=YOUR_PASSWORD
 ```
-
-3. Restart `npm run dev`
-4. In the UI pick **period start = yesterday** (day aggregates for “today” are often empty), System `S4H`, Instance `TOTAL`, click **Load**
-
-The Next.js API calls your ABAP handler; the dashboard maps the JSON into the same charts/tables as mock mode.
-
-Re-activate the enriched `ZCL_ST03N_HTTP_HANDLER` from git so users / USERTCODE / RFC / hitlists are included in the JSON (not only `meta` counts).
-
-### RFC (optional)
 
 ```bash
-SAP_PROVIDER=rfc
-SAP_ASHOST=your-app-server
-SAP_SYSNR=00
-SAP_CLIENT=100
-SAP_USER=...
-SAP_PASSWD=...
-SAP_SYSTEM_ID=PRD
-SAP_INSTANCE=TOTAL
+npm run dev
 ```
 
-Install the SAP NetWeaver RFC SDK and [`node-rfc`](https://github.com/SAP/node-rfc), then implement `invokeAggregates()` in `src/lib/sap/rfc-provider.ts`. Until that is wired, `SAP_PROVIDER=rfc` fails loudly instead of returning empty data.
+Open [http://127.0.0.1:43145](http://127.0.0.1:43145).
 
-Prefer the **ABAP report** or **HTTP ICF** path if you want extracts without exposing RFC to an external host.
+1. Set **System** / **Instance** / **Period** (prefer **yesterday** for day data).
+2. Click **Load** — badge should show **HTTP**.
+3. Scroll to **Save as CSV** → download one table or **All CSVs (ZIP)** (same columns as ABAP / CLI).
+
+Production-style:
+
+```bash
+npm run build
+npm start
+```
+
+### E. Optional: ABAP CSV on the stack
+
+1. `SE38` → `ZST03N_EXTRACT` → Execute.
+2. Component `TOTAL` (or instance), period type/start, output path.
+3. Download CSVs to presentation server or write to app server + schedule via **SM36**.
+
+See [abap/README.md](abap/README.md).
+
+### F. Optional: Node CLI CSV
+
+```bash
+npm run extract -- --periodType D --periodStart 2026-09-07 --out ./output/live --json
+```
+
+Uses the same `SAP_PROVIDER` / env as the web app. Writes `tasktype.csv`, `tcdet.csv`, `userworkload.csv`, `usertcode.csv`, `times.csv`, `rfc.csv`, hitlists, `manifest.csv`.
+
+```bash
+npm run extract -- --help
+```
+
+---
+
+## CSV from the web app
+
+After data is available (mock always; HTTP after **Load**):
+
+| Control | Result |
+|---|---|
+| **All CSVs (ZIP)** | One zip with every aggregate file |
+| Per-table buttons | Single `.csv` download |
+
+API (same query params as the dashboard):
+
+```http
+GET /api/workload/export?table=all&systemId=S4H&instance=TOTAL&periodType=D&periodStart=2026-09-07
+GET /api/workload/export?table=tasktype&...
+```
+
+Tables: `all`, `tasktype`, `tcdet`, `userworkload`, `usertcode`, `times`, `rfc`, `hitlist_resptime`, `hitlist_database`, `manifest`.
+
+---
+
+## API reference
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/workload/meta` | Connection mode + supported aggregates |
+| `GET /api/workload` | Overview (`TASKTYPE` + totals) |
+| `GET /api/workload/bundle` | Full ST03N-shaped JSON |
+| `GET /api/workload/export` | CSV or ZIP export |
+
+Query params: `systemId`, `instance`, `periodType` (`D`\|`W`\|`M`), `periodStart` (`YYYY-MM-DD`).
+
+---
+
+## Providers (`.env.local`)
+
+| `SAP_PROVIDER` | Behaviour |
+|---|---|
+| `mock` (default) | Demo data — no SAP |
+| `http` | Live fetch to SICF URL (`SAP_HTTP_BASE_URL`) |
+| `rfc` | Stub for `node-rfc` + NWRFC SDK — implement `invokeAggregates()` in `src/lib/sap/rfc-provider.ts` |
+
+Prefer **HTTP (SICF)** or the **ABAP report** if you do not want to expose RFC to an external host.
+
+---
+
+## Troubleshooting
+
+| Symptom | What to check |
+|---|---|
+| Empty charts / “No ST03N aggregate data” | Period = **yesterday**; ST03N collector has data for that day; instance `TOTAL` or a real instance name |
+| SICF **404** | Activate `zst03n` **and** `workload` in SICF |
+| **403** / HTML logon page | ICF logon procedure; user/password; `sap-client` |
+| Wrong protocol / port | `SMICM` — HTTP `50000` vs HTTPS; URL must match |
+| Task types show as `TYPE_01` / hex | Re-**Pull** / re-activate enriched `ZCL_ST03N_HTTP_HANDLER` from git (emits readable task type names) |
+| Only meta counts in JSON | Same — activate latest handler with full payload |
+| Node cannot reach SAP | Network / VPN / Cloud Connector; do not expose SICF publicly without hardening |
+| Hydration / locale quirks | App formats dates in UTC intentionally |
+
+**Security:** restrict SICF users/roles; prefer HTTPS in production; least-privilege technical user; Cloud Connector + principal propagation or OAuth over basic auth when going beyond a lab.
+
+---
 
 ## Stack
 
-Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, Recharts, plus a `tsx` CLI and an on-stack ABAP report.
+Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, Recharts, `tsx` CLI, abapGit-ready ABAP under `abap/`.
+
+## Docs in repo
+
+- [abap/README.md](abap/README.md) — `ZST03N_EXTRACT` install & selection screen  
+- [abap/HTTP.md](abap/HTTP.md) — SICF / ICF handler detail & optional SEGW OData  
+- [`.env.example`](.env.example) — env template  

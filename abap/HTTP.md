@@ -125,7 +125,7 @@ SAP_USER=...
 SAP_PASSWD=...
 ```
 
-> `SAP_PROVIDER=http` still needs a small Node provider wired to `fetch` this URL (same pattern as `rfc-provider.ts`). Say if you want that added next.
+Restart `npm run dev` after changing `.env.local`. In the UI use **yesterday’s** date for day aggregates, then **Load**. Use **Save as CSV** on the dashboard (or `GET /api/workload/export`) for the same files as `ZST03N_EXTRACT`.
 
 For on-prem S/4 from outside the network, put **SAP Cloud Connector** (or a reverse proxy) in front; do not expose SICF to the public internet without hardening.
 

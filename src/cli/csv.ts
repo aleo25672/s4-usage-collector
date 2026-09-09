@@ -21,6 +21,193 @@ export function toCsv(
   return `${lines.join("\n")}\n`;
 }
 
+export type CsvTableId =
+  | "tasktype"
+  | "tcdet"
+  | "userworkload"
+  | "usertcode"
+  | "times"
+  | "rfc"
+  | "hitlist_resptime"
+  | "hitlist_database"
+  | "manifest";
+
+export interface CsvFileSpec {
+  id: CsvTableId;
+  filename: string;
+  label: string;
+  headers: string[];
+  rows: Array<Record<string, unknown>>;
+}
+
+/** Build the same CSV set the ABAP extract / CLI writes. */
+export function buildCsvFiles(bundle: WorkloadBundle): CsvFileSpec[] {
+  const { overview } = bundle;
+  return [
+    {
+      id: "tasktype",
+      filename: "tasktype.csv",
+      label: "Task types",
+      headers: [
+        "taskType",
+        "steps",
+        "avgResponseTimeMs",
+        "avgCpuTimeMs",
+        "avgDbTimeMs",
+        "avgWaitTimeMs",
+        "avgGuiTimeMs",
+        "avgRollWaitMs",
+        "totalResponseTimeMs",
+      ],
+      rows: overview.taskTypes as unknown as Array<Record<string, unknown>>,
+    },
+    {
+      id: "tcdet",
+      filename: "tcdet.csv",
+      label: "Transactions",
+      headers: [
+        "tcode",
+        "report",
+        "taskType",
+        "steps",
+        "avgResponseTimeMs",
+        "avgCpuTimeMs",
+        "avgDbTimeMs",
+        "totalResponseTimeMs",
+        "dbReads",
+        "dbChanges",
+      ],
+      rows: bundle.transactions as unknown as Array<Record<string, unknown>>,
+    },
+    {
+      id: "userworkload",
+      filename: "userworkload.csv",
+      label: "Users",
+      headers: [
+        "user",
+        "accountType",
+        "steps",
+        "avgResponseTimeMs",
+        "avgCpuTimeMs",
+        "avgDbTimeMs",
+        "totalResponseTimeMs",
+        "distinctTransactions",
+      ],
+      rows: bundle.users as unknown as Array<Record<string, unknown>>,
+    },
+    {
+      id: "usertcode",
+      filename: "usertcode.csv",
+      label: "User × transaction",
+      headers: [
+        "user",
+        "tcode",
+        "steps",
+        "avgResponseTimeMs",
+        "totalResponseTimeMs",
+      ],
+      rows: bundle.userTransactions as unknown as Array<Record<string, unknown>>,
+    },
+    {
+      id: "times",
+      filename: "times.csv",
+      label: "Time profile",
+      headers: [
+        "slot",
+        "hour",
+        "steps",
+        "dialogSteps",
+        "backgroundSteps",
+        "avgResponseTimeMs",
+        "avgDbTimeMs",
+      ],
+      rows: bundle.timeProfile as unknown as Array<Record<string, unknown>>,
+    },
+    {
+      id: "rfc",
+      filename: "rfc.csv",
+      label: "RFC",
+      headers: [
+        "direction",
+        "destination",
+        "functionModule",
+        "calls",
+        "avgExecutionTimeMs",
+        "avgRemoteTimeMs",
+        "errors",
+      ],
+      rows: bundle.rfc as unknown as Array<Record<string, unknown>>,
+    },
+    {
+      id: "hitlist_resptime",
+      filename: "hitlist_resptime.csv",
+      label: "Hitlist · response",
+      headers: [
+        "kind",
+        "user",
+        "tcode",
+        "report",
+        "responseTimeMs",
+        "dbTimeMs",
+        "cpuTimeMs",
+        "timestamp",
+        "instance",
+      ],
+      rows: bundle.hitlistResponse as unknown as Array<Record<string, unknown>>,
+    },
+    {
+      id: "hitlist_database",
+      filename: "hitlist_database.csv",
+      label: "Hitlist · database",
+      headers: [
+        "kind",
+        "user",
+        "tcode",
+        "report",
+        "responseTimeMs",
+        "dbTimeMs",
+        "cpuTimeMs",
+        "timestamp",
+        "instance",
+      ],
+      rows: bundle.hitlistDatabase as unknown as Array<Record<string, unknown>>,
+    },
+    {
+      id: "manifest",
+      filename: "manifest.csv",
+      label: "Manifest",
+      headers: [
+        "systemId",
+        "instance",
+        "periodType",
+        "periodStart",
+        "providerMode",
+        "collectedAt",
+        "totalSteps",
+        "avgResponseTimeMs",
+        "avgDbTimeMs",
+        "dialogUsers",
+        "distinctTransactions",
+      ],
+      rows: [
+        {
+          systemId: overview.query.systemId,
+          instance: overview.query.instance,
+          periodType: overview.query.periodType,
+          periodStart: overview.query.periodStart,
+          providerMode: overview.connection.mode,
+          collectedAt: overview.collectedAt,
+          totalSteps: overview.totals.steps,
+          avgResponseTimeMs: overview.totals.avgResponseTimeMs,
+          avgDbTimeMs: overview.totals.avgDbTimeMs,
+          dialogUsers: overview.totals.dialogUsers,
+          distinctTransactions: overview.totals.distinctTransactions,
+        },
+      ],
+    },
+  ];
+}
+
 export interface ExtractArtifacts {
   dir: string;
   files: string[];
@@ -33,158 +220,10 @@ export function writeBundleCsv(
 ): ExtractArtifacts {
   mkdirSync(outDir, { recursive: true });
   const files: string[] = [];
-  const write = (name: string, headers: string[], rows: Array<Record<string, unknown>>) => {
-    const path = join(outDir, name);
-    writeFileSync(path, toCsv(headers, rows), "utf8");
+  for (const spec of buildCsvFiles(bundle)) {
+    const path = join(outDir, spec.filename);
+    writeFileSync(path, toCsv(spec.headers, spec.rows), "utf8");
     files.push(path);
-  };
-
-  const { overview } = bundle;
-  write(
-    "tasktype.csv",
-    [
-      "taskType",
-      "steps",
-      "avgResponseTimeMs",
-      "avgCpuTimeMs",
-      "avgDbTimeMs",
-      "avgWaitTimeMs",
-      "avgGuiTimeMs",
-      "avgRollWaitMs",
-      "totalResponseTimeMs",
-    ],
-    overview.taskTypes as unknown as Array<Record<string, unknown>>,
-  );
-
-  write(
-    "tcdet.csv",
-    [
-      "tcode",
-      "report",
-      "taskType",
-      "steps",
-      "avgResponseTimeMs",
-      "avgCpuTimeMs",
-      "avgDbTimeMs",
-      "totalResponseTimeMs",
-      "dbReads",
-      "dbChanges",
-    ],
-    bundle.transactions as unknown as Array<Record<string, unknown>>,
-  );
-
-  write(
-    "userworkload.csv",
-    [
-      "user",
-      "accountType",
-      "steps",
-      "avgResponseTimeMs",
-      "avgCpuTimeMs",
-      "avgDbTimeMs",
-      "totalResponseTimeMs",
-      "distinctTransactions",
-    ],
-    bundle.users as unknown as Array<Record<string, unknown>>,
-  );
-
-  write(
-    "usertcode.csv",
-    ["user", "tcode", "steps", "avgResponseTimeMs", "totalResponseTimeMs"],
-    bundle.userTransactions as unknown as Array<Record<string, unknown>>,
-  );
-
-  write(
-    "times.csv",
-    [
-      "slot",
-      "hour",
-      "steps",
-      "dialogSteps",
-      "backgroundSteps",
-      "avgResponseTimeMs",
-      "avgDbTimeMs",
-    ],
-    bundle.timeProfile as unknown as Array<Record<string, unknown>>,
-  );
-
-  write(
-    "rfc.csv",
-    [
-      "direction",
-      "destination",
-      "functionModule",
-      "calls",
-      "avgExecutionTimeMs",
-      "avgRemoteTimeMs",
-      "errors",
-    ],
-    bundle.rfc as unknown as Array<Record<string, unknown>>,
-  );
-
-  write(
-    "hitlist_resptime.csv",
-    [
-      "kind",
-      "user",
-      "tcode",
-      "report",
-      "responseTimeMs",
-      "dbTimeMs",
-      "cpuTimeMs",
-      "timestamp",
-      "instance",
-    ],
-    bundle.hitlistResponse as unknown as Array<Record<string, unknown>>,
-  );
-
-  write(
-    "hitlist_database.csv",
-    [
-      "kind",
-      "user",
-      "tcode",
-      "report",
-      "responseTimeMs",
-      "dbTimeMs",
-      "cpuTimeMs",
-      "timestamp",
-      "instance",
-    ],
-    bundle.hitlistDatabase as unknown as Array<Record<string, unknown>>,
-  );
-
-  write(
-    "manifest.csv",
-    [
-      "systemId",
-      "instance",
-      "periodType",
-      "periodStart",
-      "providerMode",
-      "collectedAt",
-      "totalSteps",
-      "avgResponseTimeMs",
-      "avgDbTimeMs",
-      "dialogUsers",
-      "distinctTransactions",
-    ],
-    [
-      {
-        systemId: overview.query.systemId,
-        instance: overview.query.instance,
-        periodType: overview.query.periodType,
-        periodStart: overview.query.periodStart,
-        providerMode: overview.connection.mode,
-        collectedAt: overview.collectedAt,
-        totalSteps: overview.totals.steps,
-        avgResponseTimeMs: overview.totals.avgResponseTimeMs,
-        avgDbTimeMs: overview.totals.avgDbTimeMs,
-        dialogUsers: overview.totals.dialogUsers,
-        distinctTransactions: overview.totals.distinctTransactions,
-      },
-    ],
-  );
-
+  }
   return { dir: outDir, files };
 }
