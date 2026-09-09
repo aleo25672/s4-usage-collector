@@ -172,6 +172,7 @@ OData is better for governance; **ICF JSON is faster to ship** for this ST03N co
 | 404 service missing | Node not activated in SICF |
 | JSON `No ST03N aggregate data` | Wrong period / collector has no data for that day |
 | Activation error on `DBP_TIME` etc. | Align field names via `SE11` (same as extract report) |
+| Users all show as UNKNOWN in Node UI | Re-pull this class — emit `USERNAME` (ACCOUNT is often empty). Node prefers `username` then `user`/`account` |
 | Huge response / timeout | Use `periodType=D`; add paging later |
 
 ---
