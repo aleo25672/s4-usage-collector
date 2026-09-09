@@ -25,6 +25,7 @@ interface SapHttpPayload {
   };
   taskTypes?: Array<{
     taskType?: string;
+    taskTypeCode?: string;
     steps?: number;
     totalResponseTimeMs?: number;
     cpuTimeMs?: number;
@@ -96,25 +97,66 @@ function avg(total: number, steps: number): number {
   return Math.round(total / steps);
 }
 
-function asTaskType(value: string | undefined, index: number): TaskTypeCode {
-  const known = [
-    "DIALOG",
-    "BACKGROUND",
-    "UPDATE",
-    "UPDATE2",
-    "SPOOL",
-    "RFC",
-    "HTTP",
-    "HTTPS",
-    "BUFFER_SYNC",
-    "AUTOABAP",
-    "RFC_HTTP",
-    "OTHER",
-  ] as const;
-  const upper = (value ?? "").trim().toUpperCase();
-  if ((known as readonly string[]).includes(upper)) return upper as TaskTypeCode;
-  // SAP HTTP payload often omits task type text — keep rows distinct for UI keys
+function mapTaskTypeHex(code: string | undefined, index: number): TaskTypeCode {
+  const raw = (code ?? "").trim().toUpperCase();
+  const HEX: Record<string, TaskTypeCode> = {
+    "01": "DIALOG",
+    "02": "UPDATE",
+    "03": "SPOOL",
+    "04": "BACKGROUND",
+    "05": "ENQUEUE",
+    "06": "BUFFER_SYNC",
+    "07": "AUTOABAP",
+    "08": "UPDATE2",
+    "0A": "EXT_PLUGIN",
+    "0B": "AUTOTH",
+    "0C": "RPCTH",
+    "0D": "RFCVMC",
+    "21": "OTHER",
+    "22": "DINOGUI",
+    "23": "BATCH_INPUT",
+    "65": "HTTP",
+    "66": "HTTPS",
+    "75": "HTTP_JSP",
+    "76": "HTTPS_JSP",
+    FD: "ALE",
+    FE: "RFC",
+    FF: "CPIC",
+    DIALOG: "DIALOG",
+    BACKGROUND: "BACKGROUND",
+    BCKGRD: "BACKGROUND",
+    UPDATE: "UPDATE",
+    UPDATE2: "UPDATE2",
+    SPOOL: "SPOOL",
+    RFC: "RFC",
+    HTTP: "HTTP",
+    HTTPS: "HTTPS",
+    BUFFER_SYNC: "BUFFER_SYNC",
+    AUTOABAP: "AUTOABAP",
+  };
+  if (raw && HEX[raw]) return HEX[raw]!;
+  // ASCII letter form (older systems): D/B/U/…
+  const LETTER: Record<string, TaskTypeCode> = {
+    D: "DIALOG",
+    B: "BACKGROUND",
+    U: "UPDATE",
+    E: "UPDATE2",
+    S: "SPOOL",
+    R: "RFC",
+    A: "AUTOABAP",
+    H: "HTTP",
+  };
+  if (raw.length === 1 && LETTER[raw]) return LETTER[raw]!;
+  if (raw) return raw.replace(/[^A-Z0-9_]/g, "_") || `TYPE_${String(index + 1).padStart(2, "0")}`;
   return `TYPE_${String(index + 1).padStart(2, "0")}`;
+}
+
+function asTaskType(
+  value: string | undefined,
+  code: string | undefined,
+  index: number,
+): TaskTypeCode {
+  return mapTaskTypeHex(value || code, index);
 }
 
 function periodStartIso(raw: string | undefined, fallback: string): string {
@@ -143,7 +185,7 @@ export function mapSapHttpPayload(
       const dbTimeMs = Number(row.dbTimeMs ?? 0);
       const queueTimeMs = Number(row.queueTimeMs ?? 0);
       return {
-        taskType: asTaskType(row.taskType, index),
+        taskType: asTaskType(row.taskType, row.taskTypeCode, index),
         steps,
         avgResponseTimeMs: avg(totalResponseTimeMs, steps),
         avgCpuTimeMs: avg(cpuTimeMs, steps),

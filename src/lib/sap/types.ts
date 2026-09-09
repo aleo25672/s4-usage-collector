@@ -20,6 +20,17 @@ export type TaskTypeCode =
   | "BUFFER_SYNC"
   | "AUTOABAP"
   | "RFC_HTTP"
+  | "ENQUEUE"
+  | "EXT_PLUGIN"
+  | "AUTOTH"
+  | "RPCTH"
+  | "RFCVMC"
+  | "DINOGUI"
+  | "BATCH_INPUT"
+  | "HTTP_JSP"
+  | "HTTPS_JSP"
+  | "ALE"
+  | "CPIC"
   | "OTHER"
   | (string & {});
 

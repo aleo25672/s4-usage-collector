@@ -49,7 +49,10 @@ CLASS zcl_st03n_http_handler IMPLEMENTATION.
           ls_rs       TYPE swncaggrfcsrvr,
           ls_h        TYPE swnchitlist,
           lv_rows     TYPE i,
-          lv_limit    TYPE i VALUE 200.
+          lv_limit    TYPE i VALUE 200,
+          lv_tt_x     TYPE x LENGTH 1,
+          lv_tt_hex   TYPE c LENGTH 2,
+          lv_tt_name  TYPE string.
 
     lv_method = to_upper( server->request->get_header_field( '~request_method' ) ).
     IF lv_method <> 'GET'.
@@ -131,8 +134,27 @@ CLASS zcl_st03n_http_handler IMPLEMENTATION.
         lv_json = lv_json && ','.
       ENDIF.
       lv_first = abap_false.
+      " TASKTYPE is RAW(1) — emit hex + ST03N name
+      lv_tt_x = ls_tt-tasktype.
+      lv_tt_hex = lv_tt_x.
+      CASE lv_tt_hex.
+        WHEN '01'. lv_tt_name = 'DIALOG'.
+        WHEN '02'. lv_tt_name = 'UPDATE'.
+        WHEN '03'. lv_tt_name = 'SPOOL'.
+        WHEN '04'. lv_tt_name = 'BACKGROUND'.
+        WHEN '05'. lv_tt_name = 'ENQUEUE'.
+        WHEN '06'. lv_tt_name = 'BUFFER_SYNC'.
+        WHEN '07'. lv_tt_name = 'AUTOABAP'.
+        WHEN '08'. lv_tt_name = 'UPDATE2'.
+        WHEN '65'. lv_tt_name = 'HTTP'.
+        WHEN '66'. lv_tt_name = 'HTTPS'.
+        WHEN 'FE'. lv_tt_name = 'RFC'.
+        WHEN 'FF'. lv_tt_name = 'CPIC'.
+        WHEN OTHERS. lv_tt_name = |TYPE_{ lv_tt_hex }|.
+      ENDCASE.
       lv_piece =
-        |\{"steps":{ ls_tt-count },"totalResponseTimeMs":{ ls_tt-respti },| &&
+        |\{"taskType":"{ escape_json( lv_tt_name ) }","taskTypeCode":"{ lv_tt_hex }",| &&
+        |"steps":{ ls_tt-count },"totalResponseTimeMs":{ ls_tt-respti },| &&
         |"cpuTimeMs":{ ls_tt-cputi },"queueTimeMs":{ ls_tt-queueti },| &&
         |"dbTimeMs":{ ls_tt-dbp_time }\}|.
       lv_json = lv_json && lv_piece.
