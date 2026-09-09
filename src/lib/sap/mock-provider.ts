@@ -121,7 +121,7 @@ export class MockSapWorkloadProvider implements SapWorkloadProvider {
       host: "mock.local",
       client: process.env.SAP_CLIENT ?? "100",
       description:
-        "Demo data shaped like ST03N aggregates (SWNC_COLLECTOR_GET_AGGREGATES). Set SAP_PROVIDER=rfc with connection env vars for a live system.",
+        "Demo data shaped like ST03N aggregates (SWNC_COLLECTOR_GET_AGGREGATES). Set SAP_PROVIDER=http and SAP_HTTP_BASE_URL in .env.local for a live system.",
     };
   }
 

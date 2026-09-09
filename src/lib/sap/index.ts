@@ -20,10 +20,17 @@ export type {
 } from "./types";
 
 let cached: SapWorkloadProvider | null = null;
+let cachedMode: string | null = null;
+
+function resolveProviderMode(): string {
+  // Bracket access avoids occasional Next.js static env inlining quirks.
+  return (process.env["SAP_PROVIDER"] ?? "mock").trim().toLowerCase();
+}
 
 export function getSapProvider(): SapWorkloadProvider {
-  if (cached) return cached;
-  const mode = (process.env.SAP_PROVIDER ?? "mock").toLowerCase();
+  const mode = resolveProviderMode();
+  if (cached && cachedMode === mode) return cached;
+
   if (mode === "rfc") {
     cached = new RfcSapWorkloadProvider();
   } else if (mode === "http") {
@@ -31,12 +38,15 @@ export function getSapProvider(): SapWorkloadProvider {
   } else {
     cached = new MockSapWorkloadProvider();
   }
+  cachedMode = mode;
+  console.info(`[st03-lens] SAP_PROVIDER=${mode}`);
   return cached;
 }
 
 /** Test helper / hot-reload: drop cached provider after env changes. */
 export function resetSapProvider(): void {
   cached = null;
+  cachedMode = null;
 }
 
 export function parsePeriodType(value: string | null): PeriodType {
@@ -47,10 +57,7 @@ export function parsePeriodType(value: string | null): PeriodType {
 export function defaultPeriodStart(periodType: PeriodType = "D"): string {
   const d = new Date();
   // Day aggregates are often only complete for prior days on live systems
-  if (
-    (process.env.SAP_PROVIDER ?? "mock").toLowerCase() === "http" &&
-    periodType === "D"
-  ) {
+  if (resolveProviderMode() === "http" && periodType === "D") {
     d.setUTCDate(d.getUTCDate() - 1);
   } else if (periodType === "W") {
     const day = d.getUTCDay();
