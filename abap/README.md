@@ -13,7 +13,7 @@ Traditional on-stack extract of the same ST03N aggregates the Node.js app models
 | Schedule recurring full extract | No | Use this report or the Node CLI |
 | RFC-readable aggregates | Via `SWNC_*` FMs | Yes |
 
-So: use ST03N for interactive analysis; use **this report** or **`npm run extract`** for pipelines.
+So: use ST03N for interactive analysis; use **this report**, the **web app Save as CSV**, or **`npm run extract`** for pipelines and bulk download.
 
 ## Files (abapGit layout)
 
