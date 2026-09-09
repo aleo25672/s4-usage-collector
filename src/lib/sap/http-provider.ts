@@ -442,11 +442,22 @@ export class HttpSapWorkloadProvider implements SapWorkloadProvider {
       headers.Authorization = `Basic ${Buffer.from(`${user}:${pass}`).toString("base64")}`;
     }
 
-    const res = await fetch(url, {
-      method: "GET",
-      headers,
-      cache: "no-store",
-    });
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: "GET",
+        headers,
+        cache: "no-store",
+      });
+    } catch (err) {
+      const cause =
+        err instanceof Error
+          ? (err as Error & { cause?: unknown }).cause ?? err.message
+          : String(err);
+      throw new Error(
+        `Cannot reach SAP at ${url.origin}${url.pathname} (${String(cause)}). Check VPN/network, host/port in SMICM, and that SICF is active.`,
+      );
+    }
 
     const text = await res.text();
     let json: SapHttpPayload;
