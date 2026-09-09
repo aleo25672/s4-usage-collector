@@ -1,4 +1,4 @@
-# ABAP extract — ZST03N_EXTRACT
+# ABAP extract — ZEVO_ST03_EXTRACT
 
 Traditional on-stack extract of the same ST03N aggregates the Node.js app models.
 
@@ -19,18 +19,18 @@ So: use ST03N for interactive analysis; use **this report**, the **web app Save 
 
 | File | Role |
 |---|---|
-| `zst03n_extract.prog.abap` | Report source |
-| `zst03n_extract.prog.xml` | abapGit metadata (PROGDIR + texts) |
+| `zevo_st03_extract.prog.abap` | Report source |
+| `zevo_st03_extract.prog.xml` | abapGit metadata (PROGDIR + texts) |
 
 Repo root has `.abapgit.xml` with **starting folder** `/abap/` so the Next.js app can live alongside ABAP in the same git repo.
 
 ## Install with abapGit
 
 1. Install [abapGit](https://docs.abapgit.org) in the SAP system (if needed).
-2. Create a local package, e.g. `ZST03N` (`SE80`).
+2. Create a local package, e.g. `ZEVO_ST03` (`SE80`).
 3. abapGit → **New Online** (GitHub URL) or **New Offline** (zip of this repo).
-4. Link to package `ZST03N`. Confirm starting folder is `/abap/` (from `.abapgit.xml`).
-5. **Pull** → activate `ZST03N_EXTRACT`.
+4. Link to package `ZEVO_ST03`. Confirm starting folder is `/abap/` (from `.abapgit.xml`).
+5. **Pull** → activate `ZEVO_ST03_EXTRACT`.
 6. If activation fails on structure components, open `SE11` for `SWNCAGGTASKTYPE`, `SWNCAGGTCDET`, etc., and align field names for your `SAP_BASIS` release.
 
 ### Offline zip tip
@@ -39,8 +39,8 @@ Zip the whole git repo (or at least `.abapgit.xml` + `abap/`), then import in ab
 
 ## Install without abapGit (SE38)
 
-1. `SE38` → Create program `ZST03N_EXTRACT` (Executable, type 1).
-2. Paste `zst03n_extract.prog.abap`.
+1. `SE38` → Create program `ZEVO_ST03_EXTRACT` (Executable, type 1).
+2. Paste `zevo_st03_extract.prog.abap`.
 3. Activate.
 
 ## Selection screen

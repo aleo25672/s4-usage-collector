@@ -39,14 +39,14 @@ Options:
   --instance <name>      Instance or TOTAL (default: TOTAL)
   --periodType <D|W|M>   Day / Week / Month (default: D)
   --periodStart <YYYY-MM-DD>
-  --out <dir>            Output directory (default: ./output/st03n-<stamp>)
+  --out <dir>            Output directory (default: ./output/zevo-st03-<stamp>)
   --json                 Also write bundle.json
   --help                 Show this help
 
 Notes:
   ST03N itself only supports interactive ALV "Export → Spreadsheet" from the
   GUI. For scheduled / automated extracts, use this CLI or the ABAP report
-  abap/zst03n_extract.prog.abap (SWNC_COLLECTOR_GET_AGGREGATES).
+  abap/zevo_st03_extract.prog.abap (SWNC_COLLECTOR_GET_AGGREGATES).
 `);
 }
 
@@ -71,7 +71,7 @@ async function main(): Promise<void> {
   const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
   const outDir =
     argValue(argv, "--out") ??
-    join(process.cwd(), "output", `st03n-${query.systemId}-${stamp}`);
+    join(process.cwd(), "output", `zevo-st03-${query.systemId}-${stamp}`);
 
   const provider = getSapProvider();
   const connection = provider.getConnectionInfo();

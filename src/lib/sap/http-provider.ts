@@ -14,7 +14,7 @@ import type {
   WorkloadQuery,
 } from "./types";
 
-/** Loose shape returned by ZCL_ST03N_HTTP_HANDLER (current + enriched). */
+/** Loose shape returned by ZCL_ZEVO_ST03_HTTP (current + enriched). */
 interface SapHttpPayload {
   error?: string;
   query?: {
@@ -402,7 +402,7 @@ export class HttpSapWorkloadProvider implements SapWorkloadProvider {
     this.baseUrl = (process.env.SAP_HTTP_BASE_URL ?? "").replace(/\/$/, "");
     if (!this.baseUrl) {
       throw new Error(
-        "SAP_PROVIDER=http requires SAP_HTTP_BASE_URL (e.g. http://10.0.0.189:50000/sap/bc/zst03n/workload)",
+        "SAP_PROVIDER=http requires SAP_HTTP_BASE_URL (e.g. http://10.0.0.189:50000/sap/bc/zevo_st03/workload)",
       );
     }
   }

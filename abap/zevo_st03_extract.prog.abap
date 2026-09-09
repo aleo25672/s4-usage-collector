@@ -1,5 +1,5 @@
 *&---------------------------------------------------------------------*
-*& Report  ZST03N_EXTRACT
+*& Report  ZEVO_ST03_EXTRACT
 *&---------------------------------------------------------------------*
 *& Extract SAP workload / usage statistics (ST03N aggregates) to CSV.
 *&
@@ -15,7 +15,7 @@
 *& Install: abapGit pull from /abap/ (see .abapgit.xml), or SE38 paste.
 *& Field names match SWNCAGG* / SWNCHITLIST on SAP_BASIS 7.5x+.
 *&---------------------------------------------------------------------*
-REPORT zst03n_extract.
+REPORT zevo_st03_extract.
 
 TYPE-POOLS: abap.
 
@@ -44,7 +44,7 @@ PARAMETERS:
   p_pres  RADIOBUTTON GROUP out DEFAULT 'X', " Presentation server (GUI)
   p_apps  RADIOBUTTON GROUP out,             " Application server
   p_path  TYPE rlgrap-filename
-            DEFAULT 'C:\temp\st03n_extract', " Base path / filename prefix
+            DEFAULT 'C:\temp\zevo_st03_extract', " Base path / filename prefix
   p_alv   AS CHECKBOX DEFAULT 'X'.           " Also show TASKTYPE ALV
 SELECTION-SCREEN END OF BLOCK b3.
 

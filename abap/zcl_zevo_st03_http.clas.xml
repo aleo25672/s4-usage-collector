@@ -3,9 +3,9 @@
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <VSEOCLASS>
-    <CLSNAME>ZCL_ST03N_HTTP_HANDLER</CLSNAME>
+    <CLSNAME>ZCL_ZEVO_ST03_HTTP</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>ST03N workload JSON HTTP handler</DESCRIPT>
+    <DESCRIPT>Evo ST03 workload JSON HTTP handler</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

@@ -12,10 +12,10 @@ You do **not** need full SEGW OData for a first slice. An **ICF HTTP handler** t
 Browser / Node.js
     │  HTTPS GET
     ▼
-/sap/bc/zst03n/workload
+/sap/bc/zevo_st03/workload
     │  ICF node
     ▼
-ZCL_ST03N_HTTP_HANDLER
+ZCL_ZEVO_ST03_HTTP
     │  CALL FUNCTION
     ▼
 SWNC_COLLECTOR_GET_AGGREGATES  →  JSON
@@ -24,17 +24,17 @@ SWNC_COLLECTOR_GET_AGGREGATES  →  JSON
 Example call:
 
 ```http
-GET /sap/bc/zst03n/workload?periodType=D&periodStart=20260908&instance=TOTAL
+GET /sap/bc/zevo_st03/workload?periodType=D&periodStart=20260908&instance=TOTAL
 Authorization: Basic …   (or form logon / principal propagation)
 ```
 
-Source in this repo: `zcl_st03n_http_handler.clas.abap`
+Source in this repo: `zcl_zevo_st03_http.clas.abap`
 
 ---
 
 ## Prerequisites
 
-- Authorization to create objects in a Z-package (e.g. `ZST03N`)
+- Authorization to create objects in a Z-package (e.g. `ZEVO_ST03`)
 - Authorization for ST03N / workload stats (`S_TOOLS_EX` typically)
 - Rights to maintain **SICF**
 - HTTPS access to the app server (or Cloud Connector if Node is outside)
@@ -44,7 +44,7 @@ Source in this repo: `zcl_st03n_http_handler.clas.abap`
 ## Step 1 — Create the package (once)
 
 1. `SE80` → Repository Browser → **Package**
-2. Create `ZST03N` (or reuse the one from abapGit)
+2. Create `ZEVO_ST03` (or reuse the one from abapGit)
 3. Assign a transport if this is not `$TMP`
 
 ---
@@ -53,18 +53,18 @@ Source in this repo: `zcl_st03n_http_handler.clas.abap`
 
 ### Option A — abapGit (preferred)
 
-1. Pull latest git (includes `zcl_st03n_http_handler.clas.abap` + `.clas.xml`)
-2. abapGit → **Pull** into package `ZST03N`
-3. Activate `ZCL_ST03N_HTTP_HANDLER`
+1. Pull latest git (includes `zcl_zevo_st03_http.clas.abap` + `.clas.xml`)
+2. abapGit → **Pull** into package `ZEVO_ST03`
+3. Activate `ZCL_ZEVO_ST03_HTTP`
 
 ### Option B — manual
 
-1. `SE24` (or Eclipse ADT) → Create class `ZCL_ST03N_HTTP_HANDLER`
+1. `SE24` (or Eclipse ADT) → Create class `ZCL_ZEVO_ST03_HTTP`
 2. On the **Interfaces** tab, add `IF_HTTP_EXTENSION`
-3. Paste the implementation from `zcl_st03n_http_handler.clas.abap`
+3. Paste the implementation from `zcl_zevo_st03_http.clas.abap`
 4. Activate
 
-If activation fails on a field (e.g. `DBP_TIME`), open `SE11` → that structure and align the component name (same as for `ZST03N_EXTRACT`).
+If activation fails on a field (e.g. `DBP_TIME`), open `SE11` → that structure and align the component name (same as for `ZEVO_ST03_EXTRACT`).
 
 ---
 
@@ -74,10 +74,10 @@ If activation fails on a field (e.g. `DBP_TIME`), open `SE11` → that structure
 2. Execute (F8) to display services
 3. Navigate to: `default_host` → `sap` → `bc`
 4. Right-click `bc` → **New Sub-Element**
-5. Name: `zst03n` (service name)
-6. Create another child under `zst03n`: name `workload`
+5. Name: `zevo_st03` (service name)
+6. Create another child under `zevo_st03`: name `workload`
 7. Open the `workload` service → tab **Handler List**
-8. Enter handler: `ZCL_ST03N_HTTP_HANDLER` (order 1)
+8. Enter handler: `ZCL_ZEVO_ST03_HTTP` (order 1)
 9. Tab **Logon Data** (typical for internal tools):
    - Procedure: **Alternative Logon** / Basic Authentication  
    - Or leave standard SAP logon if users call it from a browser session
@@ -87,7 +87,7 @@ If activation fails on a field (e.g. `DBP_TIME`), open `SE11` → that structure
 Final path:
 
 ```text
-/sap/bc/zst03n/workload
+/sap/bc/zevo_st03/workload
 ```
 
 ---
@@ -97,7 +97,7 @@ Final path:
 Build the URL (replace host/port/client):
 
 ```text
-https://<s4-host>:<https-port>/sap/bc/zst03n/workload?sap-client=100&periodType=D&periodStart=20260908&instance=TOTAL
+https://<s4-host>:<https-port>/sap/bc/zevo_st03/workload?sap-client=100&periodType=D&periodStart=20260908&instance=TOTAL
 ```
 
 You should get JSON with `query`, `taskTypes`, `transactions`, and `meta`.
@@ -119,13 +119,13 @@ In `.env.local`:
 
 ```bash
 SAP_PROVIDER=http
-SAP_HTTP_BASE_URL=https://<s4-host>:<port>/sap/bc/zst03n/workload
+SAP_HTTP_BASE_URL=https://<s4-host>:<port>/sap/bc/zevo_st03/workload
 SAP_CLIENT=100
 SAP_USER=...
 SAP_PASSWD=...
 ```
 
-Restart `npm run dev` after changing `.env.local`. In the UI use **yesterday’s** date for day aggregates, then **Load**. Use **Save as CSV** on the dashboard (or `GET /api/workload/export`) for the same files as `ZST03N_EXTRACT`.
+Restart `npm run dev` after changing `.env.local`. In the UI use **yesterday’s** date for day aggregates, then **Load**. Use **Save as CSV** on the dashboard (or `GET /api/workload/export`) for the same files as `ZEVO_ST03_EXTRACT`.
 
 For on-prem S/4 from outside the network, put **SAP Cloud Connector** (or a reverse proxy) in front; do not expose SICF to the public internet without hardening.
 
@@ -147,7 +147,7 @@ Use this if you need formal entity sets, `$filter`, `$select`, SAP Gateway catal
 
 ### High-level SEGW path
 
-1. **`SEGW`** → Create project `ZST03N_GW` → package `ZST03N`
+1. **`SEGW`** → Create project `ZEVO_ST03_GW` → package `ZEVO_ST03`
 2. Data Model → Import → DDIC Structure (or create entities manually):
    - Entity `TaskType` (from a thin Z-structure you define)
    - Entity `Transaction` (TCDET-like)
@@ -157,7 +157,7 @@ Use this if you need formal entity sets, `$filter`, `$select`, SAP Gateway catal
 6. Test with:
 
 ```text
-/sap/opu/odata/sap/ZST03N_GW_SRV/TaskTypeSet?$format=json
+/sap/opu/odata/sap/ZEVO_ST03_GW_SRV/TaskTypeSet?$format=json
 ```
 
 OData is better for governance; **ICF JSON is faster to ship** for this ST03N collector.
@@ -179,8 +179,8 @@ OData is better for governance; **ICF JSON is faster to ship** for this ST03N co
 
 ## Suggested order of work
 
-1. Activate `ZST03N_EXTRACT` (CSV) and prove data locally  
-2. Activate `ZCL_ST03N_HTTP_HANDLER` + SICF  
+1. Activate `ZEVO_ST03_EXTRACT` (CSV) and prove data locally  
+2. Activate `ZCL_ZEVO_ST03_HTTP` + SICF  
 3. Browser smoke test  
 4. Wire Node `SAP_PROVIDER=http`  
 5. Only then consider SEGW OData if required by integration standards  

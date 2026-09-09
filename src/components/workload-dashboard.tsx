@@ -728,7 +728,7 @@ export function WorkloadDashboard({
             <p className="max-w-3xl">
               ST03N GUI export is interactive only. For scheduled on-stack
               extracts use ABAP report{" "}
-              <span className="font-mono text-foreground">ZST03N_EXTRACT</span>.
+              <span className="font-mono text-foreground">ZEVO_ST03_EXTRACT</span>.
             </p>
           </footer>
         </>

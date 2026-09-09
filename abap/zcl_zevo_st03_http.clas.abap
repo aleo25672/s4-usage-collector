@@ -1,4 +1,4 @@
-CLASS zcl_st03n_http_handler DEFINITION
+CLASS zcl_zevo_st03_http DEFINITION
   PUBLIC
   FINAL
   CREATE PUBLIC.
@@ -19,7 +19,7 @@ CLASS zcl_st03n_http_handler DEFINITION
 ENDCLASS.
 
 
-CLASS zcl_st03n_http_handler IMPLEMENTATION.
+CLASS zcl_zevo_st03_http IMPLEMENTATION.
 
   METHOD if_http_extension~handle_request.
     DATA: lv_method   TYPE string,

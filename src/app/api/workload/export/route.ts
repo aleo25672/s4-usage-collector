@@ -25,7 +25,7 @@ export async function GET(request: Request) {
         zip.file(spec.filename, toCsv(spec.headers, spec.rows));
       }
       const stamp = query.periodStart.replace(/-/g, "");
-      const filename = `st03n_${query.systemId}_${query.periodType}_${stamp}.zip`;
+      const filename = `zevo_st03_${query.systemId}_${query.periodType}_${stamp}.zip`;
       const buffer = await zip.generateAsync({ type: "uint8array" });
       return new NextResponse(Buffer.from(buffer), {
         status: 200,

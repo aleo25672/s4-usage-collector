@@ -6,8 +6,8 @@ Pull SAP S/4 **ST03N**-style usage and workload statistics (SWNC aggregates) via
 |---|---|
 | **Node.js web app** | Dashboard + CSV/ZIP download from the browser |
 | **Node.js CLI** | `npm run extract` → CSV files (pipelines / scripts) |
-| **ABAP report** `ZST03N_EXTRACT` | On-stack CSV extract (SE38 / SM36 jobs) |
-| **ABAP HTTP** `ZCL_ST03N_HTTP_HANDLER` | SICF JSON service the web app calls live |
+| **ABAP report** `ZEVO_ST03_EXTRACT` | On-stack CSV extract (SE38 / SM36 jobs) |
+| **ABAP HTTP** `ZCL_ZEVO_ST03_HTTP` | SICF JSON service the web app calls live |
 
 Both extractors call (or mirror) `SWNC_COLLECTOR_GET_AGGREGATES` (SAP Note **1053634**). ST03N GUI export is interactive only (one ALV at a time) — use this repo for bulk / scheduled / API access.
 
@@ -62,25 +62,27 @@ Repo layout: starting folder `/abap/` (see `.abapgit.xml`).
 
 | Object | File | Role |
 |---|---|---|
-| Report `ZST03N_EXTRACT` | `abap/zst03n_extract.prog.abap` | CSV extract on S/4 |
-| Class `ZCL_ST03N_HTTP_HANDLER` | `abap/zcl_st03n_http_handler.clas.abap` | JSON over HTTP (SICF) |
+| Report `ZEVO_ST03_EXTRACT` | `abap/zevo_st03_extract.prog.abap` | CSV extract on S/4 |
+| Class `ZCL_ZEVO_ST03_HTTP` | `abap/zcl_zevo_st03_http.clas.abap` | JSON over HTTP (SICF) |
 
 **Steps**
 
 1. Install [abapGit](https://docs.abapgit.org) on the SAP system if needed.
-2. `SE80` → create package **`ZST03N`** (or reuse an existing Z-package). Assign a transport if not `$TMP`.
+2. `SE80` → create package **`ZEVO_ST03`** (or reuse an existing Z-package). Assign a transport if not `$TMP`.
 3. abapGit → **New Online** (repo URL) or **New Offline** (zip of this repo).
-4. Link to package `ZST03N`. Confirm starting folder **`/abap/`**.
+4. Link to package `ZEVO_ST03`. Confirm starting folder **`/abap/`**.
 5. **Pull** → activate:
-   - `ZST03N_EXTRACT`
-   - `ZCL_ST03N_HTTP_HANDLER`
+   - `ZEVO_ST03_EXTRACT`
+   - `ZCL_ZEVO_ST03_HTTP`
 6. If activation fails on structure fields (`FCODE`, `QUEUETI`, `DBP_TIME`, RFC `TARGET` / `FUNC_NAME`, …), open `SE11` for `SWNCAGGTASKTYPE`, `SWNCAGGTCDET`, etc., and align names to your `SAP_BASIS` release (same DDIC as ST03N).
 
-**Without abapGit:** paste report source in `SE38` as `ZST03N_EXTRACT`; create class `ZCL_ST03N_HTTP_HANDLER` in `SE24` with interface `IF_HTTP_EXTENSION` and paste the class source. Details: [abap/README.md](abap/README.md).
+**Migrating from old `ZST03N_*` names:** Pull into package `ZEVO_ST03` (new objects). Create SICF `/sap/bc/zevo_st03/workload` with handler `ZCL_ZEVO_ST03_HTTP`. Update `.env.local` `SAP_HTTP_BASE_URL`. Optionally deactivate/delete old `zst03n` SICF node and obsolete `ZST03N_EXTRACT` / `ZCL_ST03N_HTTP_HANDLER` if they exist.
+
+**Without abapGit:** paste report source in `SE38` as `ZEVO_ST03_EXTRACT`; create class `ZCL_ZEVO_ST03_HTTP` in `SE24` with interface `IF_HTTP_EXTENSION` and paste the class source. Details: [abap/README.md](abap/README.md).
 
 **Authorizations (SAP)**
 
-- Create/activate Z-objects in package `ZST03N`
+- Create/activate Z-objects in package `ZEVO_ST03`
 - Read workload stats (roles that can run **ST03N**; often `S_TOOLS_EX` / Basis admin)
 - Maintain **SICF** (next section)
 - Technical user for HTTP: least privilege, read-only workload
@@ -91,17 +93,17 @@ Full walkthrough: [abap/HTTP.md](abap/HTTP.md). Summary:
 
 1. Transaction **`SICF`** → Execute (F8).
 2. Path: `default_host` → `sap` → `bc`.
-3. Right-click `bc` → **New Sub-Element** → name **`zst03n`**.
-4. Under `zst03n`, create child **`workload`**.
-5. Open `workload` → **Handler List** → handler **`ZCL_ST03N_HTTP_HANDLER`** (order 1).
+3. Right-click `bc` → **New Sub-Element** → name **`zevo_st03`**.
+4. Under `zevo_st03`, create child **`workload`**.
+5. Open `workload` → **Handler List** → handler **`ZCL_ZEVO_ST03_HTTP`** (order 1).
 6. **Logon Data**: Basic / Alternative Logon (or your standard for internal tools).
 7. **Save** → right-click **`workload`** → **Activate Service**.  
-   Also activate parent **`zst03n`** if it is inactive.
+   Also activate parent **`zevo_st03`** if it is inactive.
 
 Final path:
 
 ```text
-/sap/bc/zst03n/workload
+/sap/bc/zevo_st03/workload
 ```
 
 **Host / port (SMICM)**
@@ -112,7 +114,7 @@ Final path:
 **Browser smoke test**
 
 ```text
-http://<s4-host>:<port>/sap/bc/zst03n/workload?sap-client=100&periodType=D&periodStart=20260907&instance=TOTAL
+http://<s4-host>:<port>/sap/bc/zevo_st03/workload?sap-client=100&periodType=D&periodStart=20260907&instance=TOTAL
 ```
 
 Expect JSON with `query`, `taskTypes`, `transactions`, users, etc.  
@@ -139,7 +141,7 @@ Edit **`.env.local`** (uncomment and set real values):
 
 ```bash
 SAP_PROVIDER=http
-SAP_HTTP_BASE_URL=http://10.0.0.189:50000/sap/bc/zst03n/workload
+SAP_HTTP_BASE_URL=http://10.0.0.189:50000/sap/bc/zevo_st03/workload
 SAP_CLIENT=100
 SAP_SYSTEM_ID=S4H
 SAP_INSTANCE=TOTAL
@@ -166,7 +168,7 @@ npm start
 
 ### E. Optional: ABAP CSV on the stack
 
-1. `SE38` → `ZST03N_EXTRACT` → Execute.
+1. `SE38` → `ZEVO_ST03_EXTRACT` → Execute.
 2. Component `TOTAL` (or instance), period type/start, output path.
 3. Download CSVs to presentation server or write to app server + schedule via **SM36**.
 
@@ -236,10 +238,10 @@ Prefer **HTTP (SICF)** or the **ABAP report** if you do not want to expose RFC t
 | Symptom | What to check |
 |---|---|
 | Empty charts / “No ST03N aggregate data” | Period = **yesterday**; ST03N collector has data for that day; instance `TOTAL` or a real instance name |
-| SICF **404** | Activate `zst03n` **and** `workload` in SICF |
+| SICF **404** | Activate `zevo_st03` **and** `workload` in SICF |
 | **403** / HTML logon page | ICF logon procedure; user/password; `sap-client` |
 | Wrong protocol / port | `SMICM` — HTTP `50000` vs HTTPS; URL must match |
-| Task types show as `TYPE_01` / hex | Re-**Pull** / re-activate enriched `ZCL_ST03N_HTTP_HANDLER` from git (emits readable task type names) |
+| Task types show as `TYPE_01` / hex | Re-**Pull** / re-activate enriched `ZCL_ZEVO_ST03_HTTP` from git (emits readable task type names) |
 | Users tab shows **UNKNOWN** | Re-**Pull** handler: USERWORKLOAD must emit `USERNAME` (ACCOUNT is often empty on S/4). Then restart Node and **Load** again |
 | Only meta counts in JSON | Same — activate latest handler with full payload |
 | Node cannot reach SAP | Network / VPN / Cloud Connector; do not expose SICF publicly without hardening |
@@ -255,6 +257,6 @@ Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, Recharts, `tsx` CLI, 
 
 ## Docs in repo
 
-- [abap/README.md](abap/README.md) — `ZST03N_EXTRACT` install & selection screen  
+- [abap/README.md](abap/README.md) — `ZEVO_ST03_EXTRACT` install & selection screen  
 - [abap/HTTP.md](abap/HTTP.md) — SICF / ICF handler detail & optional SEGW OData  
 - [`.env.example`](.env.example) — env template  
