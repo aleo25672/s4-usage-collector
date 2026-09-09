@@ -414,8 +414,8 @@ export function WorkloadDashboard({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {bundle.transactions.map((t) => (
-                      <TableRow key={`${t.tcode}-${t.report}`}>
+                    {bundle.transactions.map((t, idx) => (
+                      <TableRow key={`${t.tcode}-${t.report}-${idx}`}>
                         <TableCell className="font-mono text-xs font-medium">
                           {t.tcode}
                         </TableCell>
@@ -592,9 +592,9 @@ export function WorkloadDashboard({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {bundle.rfc.map((r) => (
+                    {bundle.rfc.map((r, idx) => (
                       <TableRow
-                        key={`${r.direction}-${r.destination}-${r.functionModule}`}
+                        key={`${r.direction}-${r.destination}-${r.functionModule}-${idx}`}
                       >
                         <TableCell className="font-mono text-xs">
                           {r.direction}
