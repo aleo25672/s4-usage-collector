@@ -333,7 +333,7 @@ export function WorkloadDashboard({
               <div className="divide-y divide-border/60">
                 {bundle.overview.taskTypes.map((t, i) => (
                   <div
-                    key={t.taskType}
+                    key={`${t.taskType}-${i}`}
                     className="grid grid-cols-[7.5rem_1fr_auto] items-center gap-3 px-4 py-2.5 sm:grid-cols-[9rem_1fr_repeat(4,minmax(0,5.5rem))]"
                   >
                     <div className="font-mono text-xs font-medium tracking-wide text-steel">

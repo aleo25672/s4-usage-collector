@@ -97,7 +97,7 @@ function avg(total: number, steps: number): number {
 }
 
 function asTaskType(value: string | undefined, index: number): TaskTypeCode {
-  const known: TaskTypeCode[] = [
+  const known = [
     "DIALOG",
     "BACKGROUND",
     "UPDATE",
@@ -110,10 +110,11 @@ function asTaskType(value: string | undefined, index: number): TaskTypeCode {
     "AUTOABAP",
     "RFC_HTTP",
     "OTHER",
-  ];
-  const upper = (value ?? "").toUpperCase();
-  if (known.includes(upper as TaskTypeCode)) return upper as TaskTypeCode;
-  return known[Math.min(index, known.length - 1)] ?? "OTHER";
+  ] as const;
+  const upper = (value ?? "").trim().toUpperCase();
+  if ((known as readonly string[]).includes(upper)) return upper as TaskTypeCode;
+  // SAP HTTP payload often omits task type text — keep rows distinct for UI keys
+  return `TYPE_${String(index + 1).padStart(2, "0")}`;
 }
 
 function periodStartIso(raw: string | undefined, fallback: string): string {

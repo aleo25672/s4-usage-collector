@@ -20,7 +20,8 @@ export type TaskTypeCode =
   | "BUFFER_SYNC"
   | "AUTOABAP"
   | "RFC_HTTP"
-  | "OTHER";
+  | "OTHER"
+  | (string & {});
 
 export interface WorkloadQuery {
   /** SAP system ID, e.g. PRD */
