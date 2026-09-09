@@ -506,8 +506,8 @@ export function WorkloadDashboard({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {bundle.userTransactions.slice(0, 40).map((row) => (
-                        <TableRow key={`${row.user}-${row.tcode}`}>
+                      {bundle.userTransactions.slice(0, 40).map((row, idx) => (
+                        <TableRow key={`${row.user}-${row.tcode}-${idx}`}>
                           <TableCell className="font-mono text-xs">
                             {row.user}
                           </TableCell>
