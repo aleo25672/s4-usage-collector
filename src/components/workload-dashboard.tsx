@@ -464,8 +464,8 @@ export function WorkloadDashboard({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {bundle.users.map((u) => (
-                        <TableRow key={u.user}>
+                      {bundle.users.map((u, idx) => (
+                        <TableRow key={`${u.user}-${idx}`}>
                           <TableCell className="font-mono text-xs font-medium">
                             {u.user}
                           </TableCell>

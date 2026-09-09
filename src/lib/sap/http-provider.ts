@@ -45,6 +45,7 @@ interface SapHttpPayload {
   }>;
   users?: Array<{
     user?: string;
+    username?: string;
     account?: string;
     steps?: number;
     totalResponseTimeMs?: number;
@@ -53,6 +54,8 @@ interface SapHttpPayload {
   }>;
   userTransactions?: Array<{
     user?: string;
+    username?: string;
+    account?: string;
     entryId?: string;
     tcode?: string;
     steps?: number;
@@ -95,6 +98,17 @@ interface SapHttpPayload {
 function avg(total: number, steps: number): number {
   if (!steps) return 0;
   return Math.round(total / steps);
+}
+
+/** Prefer non-blank string fields from SAP JSON (ACCOUNT is often empty). */
+function pickUserId(
+  ...candidates: Array<string | undefined | null>
+): string {
+  for (const c of candidates) {
+    const v = (c ?? "").trim();
+    if (v) return v;
+  }
+  return "UNKNOWN";
 }
 
 function mapTaskTypeHex(code: string | undefined, index: number): TaskTypeCode {
@@ -225,7 +239,7 @@ export function mapSapHttpPayload(
     const steps = Number(row.steps ?? 0);
     const totalResponseTimeMs = Number(row.totalResponseTimeMs ?? 0);
     return {
-      user: row.user ?? "",
+      user: pickUserId(row.user, row.username, row.account),
       tcode: row.tcode || row.entryId || "UNKNOWN",
       steps,
       avgResponseTimeMs: avg(totalResponseTimeMs, steps),
@@ -265,18 +279,31 @@ export function mapSapHttpPayload(
     );
   }
 
+  const tcodesByUser = new Map<string, Set<string>>();
+  for (const row of userTransactions) {
+    if (!row.user || row.user === "UNKNOWN") continue;
+    let set = tcodesByUser.get(row.user);
+    if (!set) {
+      set = new Set();
+      tcodesByUser.set(row.user, set);
+    }
+    if (row.tcode && row.tcode !== "UNKNOWN") set.add(row.tcode);
+  }
+
   const users: UserWorkloadAggregate[] = (payload.users ?? []).map((row) => {
     const steps = Number(row.steps ?? 0);
     const totalResponseTimeMs = Number(row.totalResponseTimeMs ?? 0);
+    // Prefer USERNAME (ST03N); ACCOUNT is often blank on S/4 USERWORKLOAD
+    const user = pickUserId(row.username, row.user, row.account);
     return {
-      user: row.user || row.account || "UNKNOWN",
+      user,
       accountType: "DIALOG",
       steps,
       avgResponseTimeMs: avg(totalResponseTimeMs, steps),
       avgCpuTimeMs: avg(Number(row.cpuTimeMs ?? 0), steps),
       avgDbTimeMs: avg(Number(row.dbTimeMs ?? 0), steps),
       totalResponseTimeMs,
-      distinctTransactions: 0,
+      distinctTransactions: tcodesByUser.get(user)?.size ?? 0,
     };
   });
 

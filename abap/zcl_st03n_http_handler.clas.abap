@@ -52,7 +52,8 @@ CLASS zcl_st03n_http_handler IMPLEMENTATION.
           lv_limit    TYPE i VALUE 200,
           lv_tt_x     TYPE x LENGTH 1,
           lv_tt_hex   TYPE c LENGTH 2,
-          lv_tt_name  TYPE string.
+          lv_tt_name  TYPE string,
+          lv_user     TYPE string.
 
     lv_method = to_upper( server->request->get_header_field( '~request_method' ) ).
     IF lv_method <> 'GET'.
@@ -189,8 +190,16 @@ CLASS zcl_st03n_http_handler IMPLEMENTATION.
       ENDIF.
       lv_first = abap_false.
       lv_rows = lv_rows + 1.
+      " ST03N user id is usually USERNAME; ACCOUNT is often empty on S/4
+      IF ls_uw-username IS NOT INITIAL.
+        lv_user = ls_uw-username.
+      ELSE.
+        lv_user = ls_uw-account.
+      ENDIF.
       lv_piece =
-        |\{"user":"{ escape_json( ls_uw-account ) }",| &&
+        |\{"user":"{ escape_json( lv_user ) }",| &&
+        |"username":"{ escape_json( ls_uw-username ) }",| &&
+        |"account":"{ escape_json( ls_uw-account ) }",| &&
         |"steps":{ ls_uw-count },"totalResponseTimeMs":{ ls_uw-respti },| &&
         |"cpuTimeMs":{ ls_uw-cputi }\}|.
       lv_json = lv_json && lv_piece.

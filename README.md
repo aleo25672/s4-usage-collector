@@ -240,6 +240,7 @@ Prefer **HTTP (SICF)** or the **ABAP report** if you do not want to expose RFC t
 | **403** / HTML logon page | ICF logon procedure; user/password; `sap-client` |
 | Wrong protocol / port | `SMICM` — HTTP `50000` vs HTTPS; URL must match |
 | Task types show as `TYPE_01` / hex | Re-**Pull** / re-activate enriched `ZCL_ST03N_HTTP_HANDLER` from git (emits readable task type names) |
+| Users tab shows **UNKNOWN** | Re-**Pull** handler: USERWORKLOAD must emit `USERNAME` (ACCOUNT is often empty on S/4). Then restart Node and **Load** again |
 | Only meta counts in JSON | Same — activate latest handler with full payload |
 | Node cannot reach SAP | Network / VPN / Cloud Connector; do not expose SICF publicly without hardening |
 | Hydration / locale quirks | App formats dates in UTC intentionally |
