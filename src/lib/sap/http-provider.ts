@@ -419,7 +419,14 @@ export class HttpSapWorkloadProvider implements SapWorkloadProvider {
   }
 
   private async fetchPayload(query: WorkloadQuery): Promise<SapHttpPayload> {
-    const url = new URL(this.baseUrl);
+    let url: URL;
+    try {
+      url = new URL(this.baseUrl);
+    } catch {
+      throw new Error(
+        `Invalid SAP_HTTP_BASE_URL "${this.baseUrl}". Use a full URL, e.g. http://10.0.0.189:50000/sap/bc/zevo_st03/workload`,
+      );
+    }
     url.searchParams.set("sap-client", process.env.SAP_CLIENT ?? "100");
     url.searchParams.set("periodType", query.periodType);
     url.searchParams.set("periodStart", toSapPeriodStart(query.periodStart));
