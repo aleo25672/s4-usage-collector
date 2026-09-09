@@ -32,7 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatCompact, formatMs, formatNumber, periodLabel } from "@/lib/format";
+import { formatCompact, formatDateTime, formatMs, formatNumber, periodLabel } from "@/lib/format";
 import type {
   PeriodType,
   WorkloadBundle,
@@ -122,7 +122,7 @@ export function WorkloadDashboard({
       setError(null);
       const mode = (json as WorkloadBundle).overview?.connection?.mode ?? "?";
       setStatusLine(
-        `Loaded via ${mode} · ${(json as WorkloadBundle).overview.totals.steps.toLocaleString()} steps`,
+        `Loaded via ${mode} · ${formatNumber((json as WorkloadBundle).overview.totals.steps)} steps`,
       );
     } catch (e) {
       if (id !== requestId.current) return;
@@ -656,7 +656,7 @@ export function WorkloadDashboard({
                               {h.instance}
                             </TableCell>
                             <TableCell className="whitespace-nowrap font-mono text-xs text-muted-foreground">
-                              {new Date(h.timestamp).toLocaleString()}
+                              {formatDateTime(h.timestamp)}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -676,7 +676,7 @@ export function WorkloadDashboard({
               </span>
             </p>
             <p className="mt-1 font-mono">
-              Collected {new Date(bundle.overview.collectedAt).toLocaleString()}
+              Collected {formatDateTime(bundle.overview.collectedAt)}
               {loadedOnce && isPending ? " · refreshing…" : ""}
             </p>
             <p className="mt-3 max-w-3xl">
