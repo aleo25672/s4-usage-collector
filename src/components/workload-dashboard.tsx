@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Activity,
   Clock3,
@@ -97,59 +97,43 @@ export function WorkloadDashboard({
   const [error, setError] = useState<string | null>(initialError);
   const [isPending, setIsPending] = useState(false);
   const [loadedOnce, setLoadedOnce] = useState(Boolean(initialBundle));
-  const [reloadKey, setReloadKey] = useState(0);
-  const skipFirstFetch = useRef(Boolean(initialBundle));
+  const [statusLine, setStatusLine] = useState<string | null>(null);
+  const requestId = useRef(0);
 
-  const query: WorkloadQuery = useMemo(
+  const draftQuery: WorkloadQuery = useMemo(
     () => ({ systemId, instance, periodType, periodStart }),
     [systemId, instance, periodType, periodStart],
   );
 
-  useEffect(() => {
-    if (skipFirstFetch.current) {
-      skipFirstFetch.current = false;
-      return;
-    }
-
-    const controller = new AbortController();
-
-    async function run() {
-      try {
-        const res = await fetch(
-          `/api/workload/bundle?${queryString(query)}`,
-          { signal: controller.signal },
-        );
-        const json = await res.json();
-        if (controller.signal.aborted) return;
-        if (!res.ok) {
-          throw new Error(json.error ?? "Failed to load workload data");
-        }
-        setBundle(json as WorkloadBundle);
-        setLoadedOnce(true);
-        setError(null);
-      } catch (e) {
-        if (
-          controller.signal.aborted ||
-          (e instanceof DOMException && e.name === "AbortError")
-        ) {
-          return;
-        }
-        setError(e instanceof Error ? e.message : "Failed to load");
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsPending(false);
-        }
+  async function loadData(q: WorkloadQuery = draftQuery) {
+    const id = ++requestId.current;
+    setIsPending(true);
+    setError(null);
+    setStatusLine(`Loading ${q.systemId}/${q.instance} · ${q.periodType} ${q.periodStart}…`);
+    try {
+      const res = await fetch(`/api/workload/bundle?${queryString(q)}`);
+      const json = await res.json();
+      if (id !== requestId.current) return;
+      if (!res.ok) {
+        throw new Error(json.error ?? "Failed to load workload data");
+      }
+      setBundle(json as WorkloadBundle);
+      setLoadedOnce(true);
+      setError(null);
+      const mode = (json as WorkloadBundle).overview?.connection?.mode ?? "?";
+      setStatusLine(
+        `Loaded via ${mode} · ${(json as WorkloadBundle).overview.totals.steps.toLocaleString()} steps`,
+      );
+    } catch (e) {
+      if (id !== requestId.current) return;
+      const message = e instanceof Error ? e.message : "Failed to load";
+      setError(message);
+      setStatusLine(null);
+    } finally {
+      if (id === requestId.current) {
+        setIsPending(false);
       }
     }
-
-    void run();
-    return () => controller.abort();
-  }, [query, reloadKey]);
-
-  function refresh() {
-    setIsPending(true);
-    skipFirstFetch.current = false;
-    setReloadKey((k) => k + 1);
   }
 
   const maxTaskSteps = bundle
@@ -192,7 +176,7 @@ export function WorkloadDashboard({
             <Button
               variant="outline"
               size="sm"
-              onClick={refresh}
+              onClick={() => void loadData()}
               disabled={isPending}
               className="gap-2"
             >
@@ -252,15 +236,19 @@ export function WorkloadDashboard({
               </div>
             </div>
             <Button
+              type="button"
               size="sm"
               className="shrink-0"
-              onClick={refresh}
+              onClick={() => void loadData()}
               disabled={isPending}
             >
-              Load
+              {isPending ? "Loading…" : "Load"}
             </Button>
           </div>
         </div>
+        {statusLine ? (
+          <p className="font-mono text-xs text-muted-foreground">{statusLine}</p>
+        ) : null}
       </header>
 
       {error ? (
@@ -700,7 +688,7 @@ export function WorkloadDashboard({
               . Example CSV:{" "}
               <a
                 className="text-steel underline-offset-2 hover:underline"
-                href={`/api/workload/export?table=tcdet&${queryString(query)}`}
+                href={`/api/workload/export?table=tcdet&${queryString(draftQuery)}`}
               >
                 download transaction profile
               </a>
